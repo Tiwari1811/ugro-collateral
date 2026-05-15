@@ -430,14 +430,14 @@ select:focus{border-color:var(--org)}
         </div>
         <div class="rate-hero">
           <div class="rhcell">
-            <div class="rhbadge" style="color:var(--org)"><div class="rhdot dot-mkt"></div>Market Value</div>
+            <div class="rhbadge" style="color:var(--org)"><div class="rhdot dot-mkt"></div>Market Value <span style="font-weight:400;opacity:.7">(Portal/Team)</span></div>
             <div class="rhval" id="rhMkt">—</div>
             <div class="rhsqm" id="rhMktSqm">—</div>
             <div class="rhsrc">Source: <a id="mktSrc" href="#" target="_blank">—</a></div>
           </div>
           <div class="rhdiv"></div>
           <div class="rhcell">
-            <div class="rhbadge" style="color:var(--grn)"><div class="rhdot dot-gv"></div>Guideline Value</div>
+            <div class="rhbadge" style="color:var(--grn)"><div class="rhdot dot-gv"></div>Guideline Value <span style="font-weight:400;opacity:.7">(SRO/IGR)</span></div>
             <div class="rhval" style="color:var(--grn)" id="rhGV">—</div>
             <div class="rhsqm" id="rhGVSqm">—</div>
             <div class="rhsrc">Source: <a id="gvSrc" href="#" target="_blank">—</a></div>
@@ -538,14 +538,30 @@ select:focus{border-color:var(--org)}
           <div>
             <div class="form-lbl">Source *</div>
             <select class="form-in form-sel" id="fSource">
-              <option value="Physical Inspection">Physical Inspection</option>
-              <option value="Registered Sale Deed">Registered Sale Deed</option>
-              <option value="IGR / Circle Rate">IGR / Circle Rate</option>
-              <option value="RERA Declaration">RERA Declaration</option>
+              <optgroup label="Market Value Sources">
               <option value="99acres">99acres</option>
               <option value="MagicBricks">MagicBricks</option>
               <option value="Housing.com">Housing.com</option>
+              <option value="Squareyards">Squareyards</option>
+              <option value="PropTiger">PropTiger</option>
+              <option value="Physical Inspection">Physical Inspection</option>
+              <option value="Registered Sale Deed">Registered Sale Deed</option>
               <option value="Bank Valuation Report">Bank Valuation Report</option>
+              </optgroup>
+              <optgroup label="Guideline Value Sources (SRO/IGR)">
+              <option value="IGR Maharashtra RR">IGR Maharashtra (Ready Reckoner)</option>
+              <option value="KAVERI Karnataka">KAVERI Karnataka</option>
+              <option value="TNREGINET">TNREGINET Tamil Nadu</option>
+              <option value="IGRS Telangana">IGRS Telangana (MVA)</option>
+              <option value="IGRS AP VLRD">IGRS AP (VLRD)</option>
+              <option value="IGRSUP">IGRSUP Uttar Pradesh</option>
+              <option value="GARVI Gujarat">GARVI Gujarat (Jantri)</option>
+              <option value="IGR Rajasthan DLC">IGR Rajasthan (DLC)</option>
+              <option value="Jamabandi Haryana">Jamabandi Haryana</option>
+              <option value="Kerala Fair Value">Kerala Registration</option>
+              <option value="WB Circle Rate">WB Registration</option>
+              <option value="MP IGR">MP IGR</option>
+              </optgroup>
               <option value="Other">Other</option>
             </select>
           </div>
@@ -614,7 +630,7 @@ select:focus{border-color:var(--org)}
 
         <div class="fmv-main-grid">
           <div class="fmvcell">
-            <div class="fmvcell-lbl" style="color:var(--org)">📊 Fair Market Value</div>
+            <div class="fmvcell-lbl" style="color:var(--org)">📊 Fair Market Value (Avg of Entries)</div>
             <div class="fmvcell-val" style="color:var(--navy)" id="fmvMainVal">—</div>
             <div class="fmvcell-sub" id="fmvMainSqm">—</div>
             <div style="margin-top:5px;font-size:.62rem;color:var(--muted)" id="fmvMethod">—</div>
@@ -671,7 +687,7 @@ select:focus{border-color:var(--org)}
       </div>
 
       <div style="flex:1"></div>
-      <div class="fnote"><p><b>FMV Methodology:</b> Weighted average of all entered rates. Outliers beyond 2σ are excluded. Confidence increases with number of data points and source diversity.</p></div>
+      <div class="fnote"><p><b>FMV Methodology:</b> Simple average of all market value entries — portal listings (99acres, MagicBricks, Housing.com) and manual team entries. Guideline Value sourced exclusively from SRO/IGR circle rate portals. RERA rates excluded from both.</p></div>
     </div>
   </div>
 
@@ -878,7 +894,7 @@ function render(pin,state,district,t,p){
   document.getElementById("mktSrc").href=srcs[0].u;
   document.getElementById("rhGV").textContent=fmt(p.gv)+" /sqft";
   document.getElementById("rhGVSqm").textContent=fmtSqm(p.gv);
-  document.getElementById("gvSrc").textContent=srcs[1]?srcs[1].n:srcs[0].n;
+  document.getElementById("gvSrc").textContent=srcs[1]?srcs[1].n+' (Circle Rate)':srcs[0].n+' (Circle Rate)';
   document.getElementById("gvSrc").href=srcs[1]?srcs[1].u:srcs[0].u;
 
   const s2=parseInt(pin);
@@ -1306,7 +1322,7 @@ async function runAI(pin,state,district,t,p){
   const srcs=STATE_SRCS[state]||DEF_SRCS;
   const prompt=`You are a senior collateral risk analyst at UGRO Capital.
 Pincode: ${pin} | ${district?district+", ":""}${state} | Zone: ${TIER_C[t].lbl}
-Market Value: ${fmt(p.mv)}/sqft | Guideline Value: ${fmt(p.gv)}/sqft
+Market Value (Listing Portals / Team Entries): ${fmt(p.mv)}/sqft | Guideline Value (SRO/IGR Circle Rate): ${fmt(p.gv)}/sqft
 Market Premium over GV: +${p.prem}% | FSV: ${fmt(p.fsv)}/sqft
 ${fmvNote}
 Max Collateral: ${fmt(p.col)}/sqft at ${p.ltvRec}% LTV
