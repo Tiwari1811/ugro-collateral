@@ -18,7 +18,7 @@
   --amb:#C47A00;--ambb:#FFF8E6;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:var(--surf);color:var(--txt);font-family:'Inter',sans-serif;font-size:15px}
+html,body{height:100%;background:var(--surf);color:var(--txt);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px}
 
 /* TOPBAR */
 .topbar{height:4px;background:linear-gradient(90deg,var(--navy) 0%,var(--org) 60%,var(--orgl) 100%)}
@@ -406,8 +406,6 @@ select:focus{border-color:var(--org)}
 /* Map click marker */
 .map-crosshair{cursor:crosshair !important}
 </style>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" media="print" onload="this.media='all'">
 </head>
 <body>
 <div class="lovl" id="lovl">
@@ -968,8 +966,8 @@ select:focus{border-color:var(--org)}
   </div>
 </div>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" media="print" onload="this.media='all'">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
 <script>
 let B64="";
 
@@ -2077,8 +2075,6 @@ function exportFMVReport(){
   .print-hint{ font-size:11px; color:#64748B; }
   .orange-bar{ height:3px; background:linear-gradient(90deg,#0A2D45,#F47920,#F9A452); }
 </style>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" media="print" onload="this.media='all'">
 </head>
 <body>
 <div class="page">
@@ -2793,20 +2789,20 @@ function _onDataReady(){
   if(typeof mergeExcelData==="function")mergeExcelData();
 }
 window._ugroDataLoaded=false;
-// Load data bundle
-(function(){
+// Load data bundle after DOM ready
+document.addEventListener("DOMContentLoaded",function(){
   const s=document.createElement("script");
   s.src="ugro_data.js";
   s.onload=function(){
     if(typeof _onDataReady==="function")_onDataReady();
   };
   s.onerror=function(){
-    // Fallback: data file not found, show friendly message
-    console.warn("ugro_data.js not found — some features may be limited");
-    document.getElementById("lmsg").textContent="Data file missing. Upload ugro_data.js to GitHub.";
+    console.warn("ugro_data.js not found");
+    const el=document.getElementById("lmsg");
+    if(el)el.textContent="Upload ugro_data.js to GitHub repo alongside index.html";
   };
-  document.head.appendChild(s);
-})();
+  document.body.appendChild(s);
+});
 
 </script>
 </body>
