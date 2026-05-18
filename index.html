@@ -845,8 +845,10 @@ function initMap(){
   map=L.map("map",{center:[20.6,78.9],zoom:5});
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap",maxZoom:19}).addTo(map);
 }
+const ACTIVE_STATES=new Set(["ANDHRA PRADESH", "GUJARAT", "HARYANA", "HIMACHAL PRADESH", "KARNATAKA", "MADHYA PRADESH", "MAHARASHTRA", "PUNJAB", "RAJASTHAN", "TAMIL NADU", "TELANGANA", "UTTAR PRADESH", "UTTARAKHAND"]);
 function populateSt(){
-  const ss=[...new Set(Object.values(DB).map(v=>v[0]).filter(Boolean))].sort();
+  const ss=[...new Set(Object.values(DB).map(v=>v[0]).filter(Boolean))]
+    .filter(s=>ACTIVE_STATES.has(s)).sort();
   const sel=document.getElementById("stSel");
   ss.forEach(s=>{const o=document.createElement("option");o.value=s;o.textContent=s;sel.appendChild(o);});
 }
