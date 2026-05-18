@@ -668,23 +668,71 @@ select:focus{border-color:var(--org)}
     <!-- ══════════ TAB 3: FMV REPORT ══════════ -->
     <div class="tab-content" id="tc3">
       <div style="padding:16px 18px;background:var(--navy);border-bottom:1px solid rgba(255,255,255,.07)">
-        <div class="sec-lbl">Fair Market Value Report</div>
-        <div class="iw">
-          <span class="pic">⌕</span>
-          <input class="pin-in" id="fmvPin" type="text" maxlength="6" inputmode="numeric" placeholder="Enter pincode to generate FMV…">
+        <div class="sec-lbl">FMV Report — by Location (Lat / Long)</div>
+        <div style="display:flex;gap:7px;margin-bottom:7px">
+          <div style="flex:1">
+            <div style="font-size:.6rem;color:rgba(255,255,255,.38);
+              text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Latitude</div>
+            <input class="pin-in" id="fmvLat" type="number" step="0.0001"
+              placeholder="e.g. 12.9716" style="font-family:'Inter',sans-serif;
+              font-size:.85rem;letter-spacing:0">
+          </div>
+          <div style="flex:1">
+            <div style="font-size:.6rem;color:rgba(255,255,255,.38);
+              text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Longitude</div>
+            <input class="pin-in" id="fmvLon" type="number" step="0.0001"
+              placeholder="e.g. 77.5946" style="font-family:'Inter',sans-serif;
+              font-size:.85rem;letter-spacing:0">
+          </div>
         </div>
-        <button class="fbtn" style="margin-top:8px" onclick="generateFMV()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
-          Generate FMV Report
-        </button>
+        <div style="display:flex;gap:7px;margin-bottom:7px">
+          <div style="flex:1">
+            <div style="font-size:.6rem;color:rgba(255,255,255,.38);
+              text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">
+              Search Radius (km)
+            </div>
+            <input class="pin-in" id="fmvRadius" type="number" min="1" max="25"
+              value="5" style="font-family:'Inter',sans-serif;font-size:.85rem;letter-spacing:0">
+          </div>
+          <div style="flex:1">
+            <div style="font-size:.6rem;color:rgba(255,255,255,.38);
+              text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">
+              Nearest Pincode (auto)
+            </div>
+            <input class="pin-in" id="fmvPin" type="text" maxlength="6"
+              placeholder="Auto-detected" readonly
+              style="font-family:monospace;font-size:.95rem;letter-spacing:.1em;
+              background:rgba(255,255,255,.04);cursor:default">
+          </div>
+        </div>
+        <div style="display:flex;gap:7px">
+          <button class="fbtn" style="flex:1" onclick="generateFMVFromLatLon()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2"><path d="M18 20V10"/>
+              <path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+            Generate from Coordinates
+          </button>
+          <button style="padding:9px 12px;background:rgba(255,255,255,.08);
+            border:1.5px solid rgba(255,255,255,.12);border-radius:7px;color:rgba(255,255,255,.7);
+            font-size:.75rem;font-weight:600;cursor:pointer;white-space:nowrap;
+            font-family:'Inter',sans-serif;transition:all .2s"
+            onclick="useMapClickForFMV()"
+            onmouseover="this.style.borderColor='var(--org)';this.style.color='var(--orgl)'"
+            onmouseout="this.style.borderColor='rgba(255,255,255,.12)';this.style.color='rgba(255,255,255,.7)'">
+            🗺 Pick on Map
+          </button>
+        </div>
+        <div style="font-size:.62rem;color:rgba(255,255,255,.28);margin-top:6px">
+          💡 Or click anywhere on the map → auto-fills coordinates here
+        </div>
       </div>
 
       <!-- FMV CARD -->
       <div class="fmv-card" id="fmvCard">
         <div class="fmv-card-hdr">
-          <div class="fmv-card-title">Fair Market Value Assessment</div>
+          <div class="fmv-card-title">Fair Market Value Assessment — Location Based</div>
           <div class="fmv-card-pin">
-            <div class="fmv-card-pinno" id="fmvCardPin">—</div>
+            <div class="fmv-card-pinno" id="fmvCardPin" style="font-size:1rem;letter-spacing:.04em">—</div>
             <div class="fmv-card-loc" id="fmvCardLoc">—</div>
           </div>
         </div>
@@ -1062,8 +1110,14 @@ function initMap(){
   // Map click — switch to tab 4 and search
   map.on("click", function(e){
     const {lat,lng} = e.latlng;
-    document.getElementById("llLat").value = lat.toFixed(6);
-    document.getElementById("llLon").value = lng.toFixed(6);
+    // Always update both tab 3 and tab 4 inputs
+    document.getElementById("llLat").value  = lat.toFixed(6);
+    document.getElementById("llLon").value  = lng.toFixed(6);
+    document.getElementById("fmvLat").value = lat.toFixed(6);
+    document.getElementById("fmvLon").value = lng.toFixed(6);
+    // Auto-detect nearest pincode
+    const np = findNearestPin(lat, lng);
+    if(np) document.getElementById("fmvPin").value = np;
     switchTab(4);
     searchByLatLon(lat, lng);
   });
@@ -1362,6 +1416,201 @@ function removeOutliers(arr){
   return filtered.length>=Math.ceil(arr.length/2)?filtered:arr;
 }
 
+// ── FMV FROM LAT-LON ─────────────────────────────────────────
+function findNearestPin(lat, lon){
+  let bestPin=null, bestDist=999;
+  for(const [pin,[state,district,plat,plon]] of Object.entries(DB)){
+    if(!plat||!plon) continue;
+    const d=haversine(lat,lon,plat,plon);
+    if(d<bestDist){ bestDist=d; bestPin=pin; }
+  }
+  return bestPin;
+}
+
+function useMapClickForFMV(){
+  switchTab(4);
+  toast("Click anywhere on the map to set the location");
+}
+
+function generateFMVFromLatLon(){
+  const lat = parseFloat(document.getElementById("fmvLat").value);
+  const lon = parseFloat(document.getElementById("fmvLon").value);
+  const radius = parseFloat(document.getElementById("fmvRadius").value)||5;
+
+  if(isNaN(lat)||isNaN(lon)||lat<6||lat>37||lon<68||lon>98){
+    toast("Enter valid India coordinates (Lat 6–37, Lon 68–98)");
+    return;
+  }
+
+  // Find nearest pincode
+  const nearestPin = findNearestPin(lat,lon);
+  if(nearestPin) document.getElementById("fmvPin").value = nearestPin;
+
+  // Get all rate points within radius
+  const allPoints = getAllRatePoints();
+  const nearby = allPoints
+    .map(p=>({...p, distance:haversine(lat,lon,p.lat,p.lon)}))
+    .filter(p=>p.distance<=radius)
+    .sort((a,b)=>a.distance-b.distance);
+
+  // Also get entries from nearest pincode localStorage
+  const pinEntries = nearestPin ? getEntries(nearestPin) : [];
+
+  if(nearby.length<1 && pinEntries.length<1){
+    toast("No rate data within "+radius+"km. Try increasing radius or adding entries.");
+    document.getElementById("fmvCard").classList.remove("show");
+    document.getElementById("fmvEmpty").style.display="block";
+    return;
+  }
+
+  document.getElementById("fmvEmpty").style.display="none";
+  document.getElementById("fmvCard").classList.add("show");
+
+  // ── Compute location FMV using IDW ──
+  let fmvVal, conf, dataPoints, minR, maxR, stddev, sources=[];
+  const POWER=2;
+
+  if(nearby.length>=2){
+    // IDW interpolation from all nearby points
+    let wSum=0, wTot=0;
+    const rates=[];
+    for(const p of nearby.slice(0,20)){
+      const d=Math.max(p.distance,0.05);
+      const sw=p.type==="team"?2.0:1.0;
+      const w=sw/Math.pow(d,POWER);
+      wSum+=p.marketRate*w; wTot+=w;
+      rates.push(p.marketRate);
+      sources.push(p.source);
+    }
+    fmvVal=Math.round(wSum/wTot/10)*10;
+    minR=Math.min(...rates); maxR=Math.max(...rates);
+    dataPoints=nearby.length;
+    const teamPts=nearby.filter(p=>p.type==="team").length;
+    conf=dataPoints>=5&&teamPts>=2?"HIGH":dataPoints>=3?"MEDIUM":"LOW";
+    const mean=rates.reduce((s,v)=>s+v,0)/rates.length;
+    stddev=Math.round(Math.sqrt(rates.reduce((s,v)=>s+Math.pow(v-mean,2),0)/rates.length));
+  } else if(pinEntries.length>0){
+    // Fallback: simple avg of nearest pin entries
+    const rates=pinEntries.map(e=>e.marketRate).filter(v=>v>0);
+    fmvVal=Math.round(rates.reduce((s,v)=>s+v,0)/rates.length/10)*10;
+    minR=Math.min(...rates); maxR=Math.max(...rates);
+    dataPoints=rates.length;
+    conf=dataPoints>=5?"HIGH":dataPoints>=3?"MEDIUM":"LOW";
+    stddev=0; sources=[...new Set(pinEntries.map(e=>e.source))];
+  } else {
+    // Pure model fallback
+    const state=DB[nearestPin]?DB[nearestPin][0]:"";
+    const t=tier(state,nearestPin||"110001");
+    const p=pricing(nearestPin||"110001",state,t);
+    fmvVal=p.mv; minR=p.gv; maxR=p.mv;
+    dataPoints=0; conf="MODEL"; stddev=0; sources=["Model Estimate"];
+  }
+
+  // Get GV from nearest pin
+  const nearState  = nearestPin&&DB[nearestPin]?DB[nearestPin][0]:"";
+  const nearDist   = nearestPin&&DB[nearestPin]?DB[nearestPin][1]:"";
+  const nearTier   = nearestPin?tier(nearState,nearestPin):"URBAN";
+  const nearPricing= nearestPin?pricing(nearestPin,nearState,nearTier):{gv:0,ltvRec:55,ltvMax:65,fsv:.75};
+  const gvDisp     = nearPricing.gv||0;
+  const tc         = TIER_C[nearTier];
+  const prem       = gvDisp>0?Math.round((fmvVal/gvDisp-1)*100):0;
+  const confColor  = conf==="HIGH"?"var(--grn)":conf==="MEDIUM"||conf==="MODEL"?"var(--amb)":"var(--red)";
+
+  // ── Populate card ──
+  document.getElementById("fmvCardPin").textContent =
+    lat.toFixed(5)+", "+lon.toFixed(5);
+  document.getElementById("fmvCardLoc").textContent =
+    (nearDist?nearDist+", ":"")+nearState+
+    (nearestPin?" (nearest PIN: "+nearestPin+")":"");
+
+  document.getElementById("fmvMainVal").textContent = fmt(fmvVal)+" /sqft";
+  document.getElementById("fmvMainSqm").textContent = fmtSqm(fmvVal);
+  document.getElementById("fmvMethod").textContent  =
+    nearby.length>=2
+      ? "IDW interpolation · "+dataPoints+" pts · "+radius+"km radius"
+      : "Avg of "+dataPoints+" entries at nearest PIN "+nearestPin;
+
+  document.getElementById("fmvGVVal").textContent   = fmt(gvDisp)+" /sqft";
+  document.getElementById("fmvGVSqm").textContent   = fmtSqm(gvDisp)+" (Circle/GV)";
+  document.getElementById("fmvGVSource").textContent =
+    (STATE_SRCS[nearState]||DEF_SRCS)[1]?.n+" (SRO/IGR)" ||"Model estimate";
+
+  document.getElementById("fmvEntries").textContent =
+    dataPoints+(dataPoints>0?" data pts (all included)":"-model");
+  document.getElementById("fmvRange").textContent   =
+    minR&&maxR ? fmt(minR)+" – "+fmt(maxR) : "—";
+  document.getElementById("fmvStdDev").textContent  = stddev?fmt(stddev):"N/A";
+  document.getElementById("fmvConf").innerHTML      =
+    `<span style="color:${confColor};font-weight:700">${conf}</span>`;
+
+  document.getElementById("mcC").textContent  = fmt(Math.round(fmvVal*(tc.ltvRec/100)/10)*10);
+  document.getElementById("mcCn").textContent = "At "+tc.ltvRec+"% of FMV";
+  document.getElementById("mcL").textContent  = tc.ltvRec+"% (max "+tc.ltvMax+"%)";
+  document.getElementById("mcF").textContent  = fmt(Math.round(fmvVal*tc.fsv/10)*10);
+  document.getElementById("mcFn").textContent = Math.round(tc.fsv*100)+"% of FMV (FSV)";
+
+  // Breakdown table
+  if(nearby.length>0){
+    document.getElementById("fmvBreakdown").innerHTML=nearby.slice(0,15).map((p,i)=>{
+      const srcColors=["#F47920","#0D7A4C","#0D3F6E","#C47A00","#C0392B","#8E44AD"];
+      return`<div class="fmvb-row">
+        <div class="fmvb-dot" style="background:${srcColors[i%srcColors.length]}"></div>
+        <div class="fmvb-n">${p.pin} · ${p.distance.toFixed(1)}km · ${p.type==="team"?"🟢":"🔵"}</div>
+        <div class="fmvb-r">${fmt(p.marketRate)}</div>
+        <div class="fmvb-src">${p.source}</div>
+      </div>`;
+    }).join("");
+  }
+
+  // Distribution bar
+  const allRates=nearby.length>0?nearby.map(p=>p.marketRate):
+    pinEntries.map(e=>e.marketRate).filter(v=>v>0);
+  const srcColors=["#F47920","#0D7A4C","#0D3F6E","#C47A00","#C0392B","#8E44AD"];
+  if(allRates.length>0){
+    const rMin=Math.min(...allRates),rMax=Math.max(...allRates),rRange=rMax-rMin||1;
+    document.getElementById("fmvDistBar").innerHTML=allRates.map((r,i)=>{
+      const h=Math.max(8,Math.round(28*(r-rMin+rRange*.1)/(rRange*1.2)));
+      return`<div style="flex:1;height:${h}px;background:${srcColors[i%srcColors.length]};
+        border-radius:2px 2px 0 0;opacity:.85;min-width:6px" title="${fmt(r)}"></div>`;
+    }).join("");
+    document.getElementById("fmvDistLabels").innerHTML=
+      `<span>${fmt(rMin)}</span><span style="color:var(--org)">FMV: ${fmt(fmvVal)}</span><span>${fmt(rMax)}</span>`;
+  }
+
+  // Store for report generation
+  window._lastFMVData = {
+    lat, lon, nearestPin, nearState, nearDist, nearTier,
+    fmv:fmvVal, gv:gvDisp, prem, conf, dataPoints, stddev,
+    minR, maxR, sources:[...new Set(sources)], radius,
+    nearby: nearby.slice(0,15),
+    pinEntries, tc,
+  };
+
+  // Map overlay
+  document.getElementById("mP").textContent = lat.toFixed(4)+","+lon.toFixed(4);
+  document.getElementById("mM").textContent = fmt(fmvVal)+"/sqft";
+  document.getElementById("mG").textContent = fmt(gvDisp)+"/sqft";
+  document.getElementById("mL").textContent = dataPoints+" pts · "+conf;
+
+  // Update map to show location
+  if(map) searchByLatLon(lat,lon);
+}
+
+// Override old generateFMV (pincode-based) to redirect to lat-lon
+function generateFMV(){
+  // If lat-lon inputs are filled use those
+  const lat=parseFloat(document.getElementById("fmvLat")?.value||"");
+  const lon=parseFloat(document.getElementById("fmvLon")?.value||"");
+  if(!isNaN(lat)&&!isNaN(lon)) { generateFMVFromLatLon(); return; }
+  // Fallback: use last known location
+  if(currentLat&&currentLon){
+    document.getElementById("fmvLat").value=currentLat.toFixed(6);
+    document.getElementById("fmvLon").value=currentLon.toFixed(6);
+    generateFMVFromLatLon(); return;
+  }
+  toast("Please enter coordinates or click on the map first");
+}
+
 function generateFMV(){
   const pin=document.getElementById("fmvPin").value.trim();
   if(!/^\d{6}$/.test(pin)){toast("Enter a valid 6-digit pincode");return;}
@@ -1438,19 +1687,18 @@ function sendToLookup(){
   if(pin.match(/^\d{6}$/)){document.getElementById("pinIn").value=pin;switchTab(1);doSearch();}
 }
 function generateFMVOnly(){
-  const pin=document.getElementById("fmvPin").value;
-  if(!/^\d{6}$/.test(pin)){toast("Enter a pincode first");return;}
-  const fmv=computeFMV(pin);
-  if(!fmv||!fmv.fmv){toast("No entries for this pincode");return;}
-  const e=DB[pin];
-  const state=e?e[0]:"",district=e?e[1]:"";
-  const t=e?tier(state,pin):"URBAN";
-  const tc=TIER_C[t];
-  const gvDisp=fmv.gvAvg||computeModelGV(pin,state,t);
-  const prem=Math.round((fmv.fmv/gvDisp-1)*100);
-  const collateral=Math.round(fmv.fmv*(tc.ltvRec/100)/10)*10;
+  const d = window._lastFMVData;
+  if(!d){toast("Generate FMV first using coordinates");return;}
+  const pin=d.nearestPin||"";
+  const fmv={fmv:d.fmv,count:d.dataPoints,conf:d.conf,min:d.minR,max:d.maxR,stddev:d.stddev};
+  const state=d.nearState||"",district=d.nearDist||"";
+  const t=d.nearTier||"URBAN";
+  const tc=d.tc||TIER_C["URBAN"];
+  const gvDisp=d.gv||0;
+  const prem=d.prem||0;
+  const collateral=Math.round(d.fmv*(tc.ltvRec/100)/10)*10;
   const today=new Date().toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
-  const confColor=fmv.conf==="HIGH"?"var(--grn)":fmv.conf==="MEDIUM"?"var(--amb)":"var(--red)";
+  const confColor=d.conf==="HIGH"?"var(--grn)":d.conf==="MEDIUM"?"var(--amb)":"var(--red)";
 
   // Show a quick modal overlay with FMV summary
   const existing=document.getElementById("fmvModal");
@@ -1472,7 +1720,7 @@ function generateFMVOnly(){
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:1rem;
             font-weight:700;color:#FFF;letter-spacing:.05em">Fair Market Value</div>
           <div style="font-size:.65rem;color:rgba(255,255,255,.45);margin-top:1px">
-            ${pin} · ${district?district+", ":""}${state}
+            ${d.lat.toFixed(5)}, ${d.lon.toFixed(5)} · ${district?district+", ":""}${state}
           </div>
         </div>
         <span onclick="document.getElementById('fmvModal').remove()"
@@ -1617,21 +1865,43 @@ Generated: ${new Date().toLocaleString("en-IN")}`;
 }
 
 function exportFMVReport(){
-  const pin = document.getElementById("fmvPin").value;
-  if(!/^\d{6}$/.test(pin)){ toast("Enter a pincode first"); return; }
-  const fmv = computeFMV(pin);
-  if(!fmv||!fmv.fmv){ toast("No entries for this pincode"); return; }
+  // Use lat-lon derived FMV data if available
+  const d = window._lastFMVData;
+  if(!d){ toast("Generate FMV first using coordinates"); return; }
 
-  const e    = DB[pin];
-  const state    = e ? e[0] : "";
-  const district = e ? e[1] : "";
-  const t    = e ? tier(state,pin) : "URBAN";
-  const tc   = TIER_C[t];
-  const gvDisp = fmv.gvAvg || computeModelGV(pin,state,t);
-  const today  = new Date().toLocaleDateString("en-IN",{day:"2-digit",month:"long",year:"numeric"});
-  const prem   = Math.round((fmv.fmv/gvDisp-1)*100);
-  const collateral = Math.round(fmv.fmv*(tc.ltvRec/100)/10)*10;
-  const fsv        = Math.round(fmv.fmv*tc.fsv/10)*10;
+  const pin       = d.nearestPin||"";
+  const fmvVal    = d.fmv;
+  const state     = d.nearState||"";
+  const district  = d.nearDist||"";
+  const t         = d.nearTier||"URBAN";
+  const tc        = d.tc||TIER_C["URBAN"];
+  const gvDisp    = d.gv||0;
+  const today     = new Date().toLocaleDateString("en-IN",{day:"2-digit",month:"long",year:"numeric"});
+  const prem      = d.prem||0;
+  const collateral= Math.round(fmvVal*(tc.ltvRec/100)/10)*10;
+  const fsv       = Math.round(fmvVal*tc.fsv/10)*10;
+  const lat       = d.lat, lon = d.lon;
+  const radius    = d.radius||5;
+
+  // Build fmv-like object for table rendering
+  const fmv = {
+    fmv:    fmvVal,
+    count:  d.dataPoints,
+    conf:   d.conf,
+    min:    d.minR||fmvVal,
+    max:    d.maxR||fmvVal,
+    stddev: d.stddev||0,
+    gvAvg:  d.gv,
+    entries: d.nearby.length>0
+      ? d.nearby.map(p=>({
+          marketRate:   p.marketRate,
+          propertyType: p.type==="team"?"Residential":"Residential",
+          source:       p.source,
+          enteredBy:    p.pin+" ("+p.distance.toFixed(1)+"km)",
+          date:         p.scraped_date||"—",
+        }))
+      : d.pinEntries,
+  };
 
   // Source breakdown table rows
   const srcRows = fmv.entries.map((en,i)=>`
@@ -1824,7 +2094,10 @@ function exportFMVReport(){
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
       <div>
         <div style="font-size:9px;color:#94A8BC;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Pincode</div>
-        <div style="font-family:monospace;font-size:22px;font-weight:700;color:#F47920">${pin}</div>
+        <div style="font-family:monospace;font-size:14px;font-weight:700;color:#F47920;line-height:1.3">
+          ${lat.toFixed(5)}, ${lon.toFixed(5)}<br>
+          <span style="font-size:11px;color:#94A8BC">Nearest PIN: ${pin}</span>
+        </div>
       </div>
       <div>
         <div style="font-size:9px;color:#94A8BC;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Location</div>
@@ -2123,8 +2396,23 @@ function switchTab(n){
     else renderEntriesList(null);
     updateEntryCount();
   }
-  if(n===3&&document.getElementById("fmvPin").value===""){
-    if(LAST.pin)document.getElementById("fmvPin").value=LAST.pin;
+  if(n===3){
+    // Pre-fill from last map click if coords available
+    if(currentLat&&currentLon){
+      document.getElementById("fmvLat").value=currentLat.toFixed(6);
+      document.getElementById("fmvLon").value=currentLon.toFixed(6);
+      // Auto-detect nearest pincode
+      const np=findNearestPin(currentLat,currentLon);
+      if(np)document.getElementById("fmvPin").value=np;
+    } else if(LAST.pin){
+      // Fallback: use last searched pin's coordinates
+      const e=DB[LAST.pin];
+      if(e&&e[2]&&e[3]){
+        document.getElementById("fmvLat").value=e[2].toFixed(6);
+        document.getElementById("fmvLon").value=e[3].toFixed(6);
+        document.getElementById("fmvPin").value=LAST.pin;
+      }
+    }
   }
 }
 
