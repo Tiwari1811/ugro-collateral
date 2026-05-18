@@ -1130,12 +1130,180 @@ async function loadDB(){
     document.getElementById("pinIn").placeholder="Error loading data";
     console.error(e);
   }
-};
+}
+function rmC(i){cmpItems.splice(i,1);renderCmp();}
+function cvt(){const v=parseFloat(document.getElementById("cvIn").value);document.getElementById("cvOut").textContent=v&&!isNaN(v)?"₹"+Math.round(v*10.764).toLocaleString("en-IN"):"—";}
+
+function initMap(){
+  map=L.map("map",{center:[20.6,78.9],zoom:5});
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap",maxZoom:19}).addTo(map);
+  // Map click — fills lat-lon inputs and triggers search
+  map.on("click",function(e){
+    const{lat,lng}=e.latlng;
+    const lLat=document.getElementById("llLat");
+    const lLon=document.getElementById("llLon");
+    const fLat=document.getElementById("fmvLat");
+    const fLon=document.getElementById("fmvLon");
+    if(lLat)lLat.value=lat.toFixed(6);
+    if(lLon)lLon.value=lng.toFixed(6);
+    if(fLat)fLat.value=lat.toFixed(6);
+    if(fLon)fLon.value=lng.toFixed(6);
+    const np=findNearestPin(lat,lng);
+    const fPin=document.getElementById("fmvPin");
+    if(np&&fPin)fPin.value=np;
+    switchTab(4);
+    searchByLatLon(lat,lng);
+  });
+}
+
+function populateSt(){
+  const ss=[...new Set(Object.values(DB).map(v=>v[0]).filter(Boolean))].sort();
+  const sel=document.getElementById("stSel");
+  ss.forEach(s=>{const o=document.createElement("option");o.value=s;o.textContent=s;sel.appendChild(o);});
+}
+
+function fState(){
+  const st=document.getElementById("stSel").value;
+  const ds=document.getElementById("dtSel");
+  ds.innerHTML='<option value="">— District —</option>';
+  if(!st)return;
+  const dd=[...new Set(Object.values(DB).filter(v=>v[0]===st).map(v=>v[1]).filter(Boolean))].sort();
+  dd.forEach(d=>{const o=document.createElement("option");o.value=d;o.textContent=d;ds.appendChild(o);});
+  const s=Object.entries(DB).find(([k,v])=>v[0]===st);
+  if(s){document.getElementById("pinIn").value=s[0];doSearch();}
+}
+
+function fDist(){
+  const dt=document.getElementById("dtSel").value;
+  if(!dt)return;
+  const s=Object.entries(DB).find(([k,v])=>v[1]===dt);
+  if(s){document.getElementById("pinIn").value=s[0];doSearch();}
+}
+
+function sp(p){document.getElementById("pinIn").value=p;doSearch();}
+
+function doSearch(){
+  const pin=document.getElementById("pinIn").value.trim();
+  if(!/^\d{6}$/.test(pin)){toast("Enter a valid 6-digit pincode");return;}
+  if(!ready){toast("Data loading, please wait…");return;}
+  const e=DB[pin];
+  if(!e){toast("Pincode not found in database");return;}
+  const[state,district,lat,lon]=e;
+  const t=tier(state,pin);
+  const p=pricing(pin,state,t);
+  LAST={pin,state,district,t,p};
+  render(pin,state,district,t,p);
+  updateMap(lat,lon,pin,state,district,t,p);
+  runAI(pin,state,district,t,p);
+}
+
+function render(pin,state,district,t,p){
+  document.getElementById("rcard").classList.add("show");
+  document.getElementById("rPin").textContent=pin;
+  document.getElementById("rLoc").textContent=(district?district+", ":"")+state;
+  const tb=document.getElementById("rTier");tb.textContent=TIER_C[t].lbl+" Zone";tb.className="tier-badge "+TIER_C[t].cls;
+
+  // Confidence indicator
+  const confColor=p.confidence==="HIGH"?"var(--grn)":p.confidence==="MEDIUM"?"var(--amb)":p.confidence==="MODEL"?"var(--mutl)":"var(--red)";
+  document.getElementById("rConf").innerHTML=`<div class="conf-dot" style="background:${confColor}"></div> ${p.confidence} ${p.isRERA?"(RERA Verified)":"(Model Estimate)"}`;
+
+  // Rate hero
+  const srcs=STATE_SRCS[state]||DEF_SRCS;
+  document.getElementById("rhMkt").textContent=fmt(p.mv)+" /sqft";
+  document.getElementById("rhMktSqm").textContent=fmtSqm(p.mv);
+  document.getElementById("mktSrc").textContent=p.isRERA?(p.sources_used[0]||srcs[0].n):srcs[0].n;
+  document.getElementById("mktSrc").href=srcs[0].u;
+  document.getElementById("mktDQ").innerHTML=confidenceBars(p.data_points,p.confidence);
+
+  document.getElementById("rhGV").textContent=fmt(p.gv)+" /sqft";
+  document.getElementById("rhGVSqm").textContent=fmtSqm(p.gv)+" (Circle/GV)";
+  document.getElementById("gvSrc").textContent=srcs[1]?srcs[1].n:srcs[0].n;
+  document.getElementById("gvSrc").href=srcs[1]?srcs[1].u:srcs[0].u;
+  document.getElementById("gvDQ").innerHTML=confidenceBars(p.data_points,p.confidence);
+
+  // Property table
+  const s2=parseInt(pin);
+  const rows=[
+    {t:"Residential",ico:"🏠",cls:"ico-r",mv:p.mv,gv:p.gv,prem:p.prem},
+    {t:"Commercial",ico:"🏢",cls:"ico-c",
+     mv:Math.round(p.mv*sr(s2+13,1.15,1.65)/10)*10,
+     gv:Math.round(p.gv*sr(s2+17,1.12,1.52)/10)*10,prem:0},
+    ...(["SEMI","RURAL"].includes(t)?[{t:"Agricultural",ico:"🌾",cls:"ico-a",
+     mv:Math.round(p.mv*sr(s2+19,.22,.45)/10)*10,
+     gv:Math.round(p.gv*sr(s2+23,.18,.42)/10)*10,prem:0}]:[]),
+  ];
+  rows.forEach(r=>{if(!r.prem)r.prem=Math.round((r.mv/r.gv-1)*100);});
+
+  document.getElementById("ptBody").innerHTML=rows.map(r=>{
+    const pc=r.prem>=40?"p-hi":r.prem>=20?"p-md":"p-lo";
+    return`<tr>
+      <td><div class="pt-lbl"><div class="pt-ico ${r.cls}">${r.ico}</div>${r.t}</div></td>
+      <td><div class="pt-mv">${fmt(r.mv)}</div><div class="pt-sub">${fmtSqm(r.mv)}</div></td>
+      <td><div class="pt-gv">${fmt(r.gv)}</div><div class="pt-sub">${fmtSqm(r.gv)}</div></td>
+      <td><span class="prem-tag ${pc}">+${r.prem}%</span></td>
+    </tr>`;
+  }).join("");
+
+  document.getElementById("mcC").textContent=fmt(p.col);
+  document.getElementById("mcCn").textContent="At "+p.ltvRec+"% of market value";
+  document.getElementById("mcL").textContent=p.ltvRec+"% (max "+p.ltvMax+"%)";
+  document.getElementById("mcF").textContent=fmt(p.fsv);
+  document.getElementById("mcFn").textContent=Math.round(TIER_C[t].fsv*100)+"% of market (FSV)";
+
+  const sc={METRO:88,URBAN:74,SEMI:58,RURAL:42}[t];
+  document.getElementById("ltvSc").textContent=sc+" / 100";
+  const fl=document.getElementById("ltvFl");
+  fl.style.width=sc+"%";
+  fl.style.background=sc>75?"var(--grn)":sc>55?"var(--amb)":"var(--red)";
+
+  const te=document.getElementById("rtags");te.innerHTML="";
+  getRisk(t).forEach(([l,c])=>{const sp=document.createElement("span");sp.className="rt "+c;sp.textContent=l;te.appendChild(sp);});
+
+  document.getElementById("srcG").innerHTML=srcs.slice(0,4).map(s=>`
+    <a href="${s.u}" target="_blank" rel="noopener" class="src-a">
+      <div class="sa-top"><div class="sa-n">${s.n}</div><span class="sa-b ${s.b==="live"?"bl":"br"}">${s.b==="live"?"LIVE":"REF"}</span></div>
+      <div class="sa-t">${s.t}</div>
+    </a>`).join("");
+
+  document.getElementById("mP").textContent=pin;
+  document.getElementById("mM").textContent=fmt(p.mv)+"/sqft";
+  document.getElementById("mG").textContent=fmt(p.gv)+"/sqft";
+  document.getElementById("mL").textContent=p.ltvRec+"% · "+p.confidence;
+
+  addCmp(pin,state,district,t,p);
+}
+
+function updateMap(lat,lon,pin,state,district,t,p){
+  if(!lat||!lon)return;
+  if(marker)map.removeLayer(marker);
+  const c=TIER_C[t].col;
+  const ico=L.divIcon({className:"",html:`<div style="width:14px;height:14px;background:${c};border:2.5px solid #FFF;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.3)"></div>`,iconSize:[14,14],iconAnchor:[7,7]});
+  marker=L.marker([lat,lon],{icon:ico})
+    .bindPopup(`<div style="font-size:11.5px;font-family:Inter,sans-serif"><strong style="color:#F47920;font-size:13px">${pin}</strong><br>${district?district+", ":""}${state}<br><span style="color:#0D7A4C">GV: ${fmt(p.gv)}/sqft</span> &nbsp;|&nbsp; <strong>Mkt: ${fmt(p.mv)}/sqft</strong><br>LTV: ${p.ltvRec}% &nbsp;·&nbsp; ${p.confidence}</div>`)
+    .addTo(map);
+  map.flyTo([lat,lon],Math.max(map.getZoom(),11),{duration:1.2});
+  marker.openPopup();
+}
+
+function addCmp(pin,state,district,t,p){
+  if(cmpItems.find(i=>i.pin===pin))return;
+  cmpItems.unshift({pin,state,district,t,p});
+  if(cmpItems.length>6)cmpItems.pop();
+  renderCmp();
+}
+function renderCmp(){
+  const sec=document.getElementById("cpSec"),el=document.getElementById("cpList");
+  if(!cmpItems.length){sec.style.display="none";return;}
+  sec.style.display="block";el.innerHTML="";
+  cmpItems.forEach((item,idx)=>{
+    const d=document.createElement("div");d.className="ci";
+    d.innerHTML=`<div><div class="ci-pin">${item.pin}</div><div class="ci-loc">${item.district?item.district+", ":""}${item.state}</div></div><div class="ci-r"><div class="ci-mv">${fmt(item.p.mv)}</div><div class="ci-gv">GV: ${fmt(item.p.gv)}</div></div><span class="ci-rm" onclick="rmC(${idx})">✕</span>`;
+    d.onclick=e=>{if(!e.target.classList.contains("ci-rm")){document.getElementById("pinIn").value=item.pin;doSearch();}};
     el.appendChild(d);
   });
 }
 function rmC(i){cmpItems.splice(i,1);renderCmp();}
-function cvt(){const v=parseFloat(document.getElementById("cvIn").value);document.getElementById("cvOut").textContent=v&&!isNaN(v)?"₹"+Math.round(v*10.764).toLocaleString("en-IN"):"—";}
+
 
 // ═══ RATE ENTRY SYSTEM ══════════════════════════════════════════
 const STORAGE_KEY="ugro_land_entries_v1";
@@ -1740,6 +1908,7 @@ function generateFMVOnly(){
 }
 
 
+function sendToLookup(){
   const pin=document.getElementById("fmvPin").value;
   if(pin.match(/^\d{6}$/)){document.getElementById("pinIn").value=pin;switchTab(1);doSearch();}
 }
@@ -1821,6 +1990,13 @@ function exportFMVReport(){
   // Confidence color
   const confColor = fmv.conf==="HIGH"?"#0D7A4C":fmv.conf==="MEDIUM"?"#C47A00":"#C0392B";
 
+  // Pre-compute values that would cause nested template issues
+  const _sourcesHtml=(STATE_SRCS[state]||DEF_SRCS).map(s=>
+    '<div class="source-card"><div class="sc-name">'+s.n+'</div>'+
+    '<div class="sc-type">'+s.t+' · <a href="'+s.u+'" style="color:#0D3F6E">'+s.u+'</a></div></div>'
+  ).join("");
+  const _riskMap={"METRO":[["High Liquidity","low"],["SARFAESI Enforceable","low"],["EM Eligible","low"],["Title: Moderate Risk","med"]],"URBAN":[["Good Marketability","low"],["EM Eligible","low"],["Title Check Reqd","med"],["Encumbrance Cert.","med"]],"SEMI":[["Moderate Liquidity","med"],["Agri Conv. Risk","med"],["Mutation Check","med"],["Survey No. Verify","med"]],"RURAL":[["Low Liquidity","high"],["Agri Restrictions","high"],["SARFAESI Caution","med"],["Physical Visit Mandatory","med"]]};
+  const _riskTagsHtml=(_riskMap[t]||[]).map(([l,c])=>'<span class="risk-tag risk-'+c+'">'+l+'</span>').join("");
   const reportHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2115,11 +2291,7 @@ function exportFMVReport(){
           Risk Indicators
         </div>
         <div class="risk-tags">
-          ${({"METRO":[["High Liquidity","low"],["SARFAESI Enforceable","low"],["EM Eligible","low"],["Title: Moderate Risk","med"]],
-              "URBAN":[["Good Marketability","low"],["EM Eligible","low"],["Title Check Reqd","med"],["Encumbrance Cert.","med"]],
-              "SEMI":[["Moderate Liquidity","med"],["Agri Conv. Risk","med"],["Mutation Check","med"],["Survey No. Verify","med"]],
-              "RURAL":[["Low Liquidity","high"],["Agri Restrictions","high"],["SARFAESI Caution","med"],["Physical Visit Mandatory","med"]]}[t]||[])
-            .map(([l,c])=>`<span class="risk-tag risk-${c}">${l}</span>`).join("")}
+          ${_riskTagsHtml}
         </div>
       </div>
       <div>
@@ -2142,11 +2314,7 @@ function exportFMVReport(){
   <div class="section">
     <div class="section-title"><span>🔗</span> Reference Sources — Verify Live Rates</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      ${(STATE_SRCS[state]||DEF_SRCS).map(s=>`
-        <div class="source-card">
-          <div class="sc-name">${s.n}</div>
-          <div class="sc-type">${s.t} · <a href="${s.u}" style="color:#0D3F6E">${s.u}</a></div>
-        </div>`).join("")}
+      ${_sourcesHtml}
     </div>
     <div style="margin-top:10px;font-size:10px;color:#94A8BC;line-height:1.6">
       Market rates sourced from UGRO branch data, portal listings (99acres, MagicBricks,
@@ -2651,12 +2819,6 @@ function addLocationEntry(){
   toast("FMV pre-filled — verify and save");
 }
 
-// ── ASYNC DATA LOADER ──────────────────────────────────────
-  // Merge Excel data
-  if(typeof mergeExcelData==="function")mergeExcelData();
-}
-window._ugroDataLoaded=false;
-// Load data bundle after DOM ready
 // Start loading data immediately
 loadDB();
 
