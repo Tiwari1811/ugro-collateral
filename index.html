@@ -732,10 +732,40 @@ select:focus{border-color:var(--org)}
           <div class="mc"><div class="mcl">Forced Sale Value</div><div class="mcv" id="fmvFSV">—</div><div class="mcn" id="fmvFSVNote">—</div></div>
         </div>
 
-        <div class="fmv-actions">
-          <button class="act-btn primary" onclick="exportFMVReport()" style="background:var(--navy);color:#FFF;border-color:var(--navy)">🖨 Desktop Valuation Report</button>
-          <button class="act-btn" onclick="copyFMVSummary()">📋 Copy Summary</button>
-          <button class="act-btn green" onclick="sendToLookup()">→ View Full Report</button>
+        <!-- FMV Action Tabs -->
+        <div style="border-top:1px solid var(--bdr)">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--bdr)">
+            <button onclick="exportFMVReport()"
+              style="padding:13px 10px;background:var(--navy);color:#FFF;border:none;
+                cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;
+                font-size:.8rem;display:flex;align-items:center;justify-content:center;
+                gap:7px;transition:all .2s;letter-spacing:.02em"
+              onmouseover="this.style.background='var(--navy2)'"
+              onmouseout="this.style.background='var(--navy)'">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+              Generate Desktop Report
+            </button>
+            <button onclick="generateFMVOnly()"
+              style="padding:13px 10px;background:var(--org);color:#FFF;border:none;
+                cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;
+                font-size:.8rem;display:flex;align-items:center;justify-content:center;
+                gap:7px;transition:all .2s;letter-spacing:.02em"
+              onmouseover="this.style.background='var(--orgl)'"
+              onmouseout="this.style.background='var(--org)'">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+              Generate FMV
+            </button>
+          </div>
+          <div style="display:flex;gap:1px;background:var(--bdr)">
+            <div style="flex:1;padding:5px 10px;background:var(--navyp);
+              font-size:.62rem;color:var(--muted);text-align:center;line-height:1.4">
+              Full report with logo,<br>references &amp; risk assessment
+            </div>
+            <div style="flex:1;padding:5px 10px;background:var(--orgp);
+              font-size:.62rem;color:var(--muted);text-align:center;line-height:1.4">
+              Quick FMV summary<br>to copy &amp; share
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1404,6 +1434,168 @@ function computeModelGV(pin,state,t){
 }
 
 function sendToLookup(){
+  const pin=document.getElementById("fmvPin").value;
+  if(pin.match(/^\d{6}$/)){document.getElementById("pinIn").value=pin;switchTab(1);doSearch();}
+}
+function generateFMVOnly(){
+  const pin=document.getElementById("fmvPin").value;
+  if(!/^\d{6}$/.test(pin)){toast("Enter a pincode first");return;}
+  const fmv=computeFMV(pin);
+  if(!fmv||!fmv.fmv){toast("No entries for this pincode");return;}
+  const e=DB[pin];
+  const state=e?e[0]:"",district=e?e[1]:"";
+  const t=e?tier(state,pin):"URBAN";
+  const tc=TIER_C[t];
+  const gvDisp=fmv.gvAvg||computeModelGV(pin,state,t);
+  const prem=Math.round((fmv.fmv/gvDisp-1)*100);
+  const collateral=Math.round(fmv.fmv*(tc.ltvRec/100)/10)*10;
+  const today=new Date().toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
+  const confColor=fmv.conf==="HIGH"?"var(--grn)":fmv.conf==="MEDIUM"?"var(--amb)":"var(--red)";
+
+  // Show a quick modal overlay with FMV summary
+  const existing=document.getElementById("fmvModal");
+  if(existing)existing.remove();
+
+  const modal=document.createElement("div");
+  modal.id="fmvModal";
+  modal.style.cssText=`position:fixed;inset:0;background:rgba(10,45,69,.7);
+    z-index:500;display:flex;align-items:center;justify-content:center;
+    backdrop-filter:blur(4px);animation:fadeUp .25s ease`;
+  modal.innerHTML=`
+    <div style="background:var(--white);border-radius:12px;overflow:hidden;
+      width:440px;max-width:95vw;box-shadow:0 8px 40px rgba(10,45,69,.35);
+      border-top:4px solid var(--org)">
+      <!-- Modal header -->
+      <div style="background:var(--navy);padding:14px 18px;
+        display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:1rem;
+            font-weight:700;color:#FFF;letter-spacing:.05em">Fair Market Value</div>
+          <div style="font-size:.65rem;color:rgba(255,255,255,.45);margin-top:1px">
+            ${pin} · ${district?district+", ":""}${state}
+          </div>
+        </div>
+        <span onclick="document.getElementById('fmvModal').remove()"
+          style="color:rgba(255,255,255,.4);cursor:pointer;font-size:1.1rem;
+          padding:2px 6px;border-radius:4px"
+          onmouseover="this.style.color='#FFF'" onmouseout="this.style.color='rgba(255,255,255,.4)'">✕</span>
+      </div>
+
+      <!-- FMV Big Number -->
+      <div style="padding:18px 20px;background:var(--orgp);
+        border-bottom:1px solid var(--bdr);text-align:center">
+        <div style="font-size:.65rem;font-weight:700;color:var(--org);
+          text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">
+          Fair Market Value
+        </div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:2.6rem;
+          font-weight:700;color:var(--navy);line-height:1">
+          ₹${fmv.fmv.toLocaleString("en-IN")}
+        </div>
+        <div style="font-size:.78rem;color:var(--muted);margin-top:4px;font-family:monospace">
+          per sqft &nbsp;·&nbsp; ≈ ₹${Math.round(fmv.fmv*10.764/10)*10}/sqm
+        </div>
+        <div style="font-size:.65rem;color:var(--muted);margin-top:3px">
+          Simple average of ${fmv.count} entered rate${fmv.count!==1?"s":""}
+        </div>
+      </div>
+
+      <!-- Key metrics -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+        background:var(--bdr);border-bottom:1px solid var(--bdr)">
+        <div style="padding:10px 12px;background:var(--white);text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;
+            letter-spacing:.07em;margin-bottom:3px">Guideline Value</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:.95rem;
+            font-weight:700;color:var(--grn)">₹${gvDisp.toLocaleString("en-IN")}</div>
+          <div style="font-size:.6rem;color:var(--muted)">per sqft</div>
+        </div>
+        <div style="padding:10px 12px;background:var(--white);text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;
+            letter-spacing:.07em;margin-bottom:3px">Mkt Premium</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:.95rem;
+            font-weight:700;color:${prem>=40?"var(--red)":prem>=20?"var(--amb)":"var(--grn)"}">
+            +${prem}%</div>
+          <div style="font-size:.6rem;color:var(--muted)">over GV</div>
+        </div>
+        <div style="padding:10px 12px;background:var(--white);text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;
+            letter-spacing:.07em;margin-bottom:3px">Confidence</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:.95rem;
+            font-weight:700;color:${confColor}">${fmv.conf}</div>
+          <div style="font-size:.6rem;color:var(--muted)">${fmv.count} data pts</div>
+        </div>
+      </div>
+
+      <!-- Collateral metrics -->
+      <div style="padding:12px 18px;border-bottom:1px solid var(--bdr)">
+        <div style="font-size:.62rem;color:var(--muted);text-transform:uppercase;
+          letter-spacing:.09em;font-weight:600;margin-bottom:8px">Collateral Assessment</div>
+        <div style="display:flex;justify-content:space-between;
+          font-size:.78rem;margin-bottom:5px">
+          <span style="color:var(--txt2)">Max Collateral (${tc.ltvRec}% LTV)</span>
+          <span style="font-weight:700;font-family:monospace;color:var(--navy)">
+            ₹${collateral.toLocaleString("en-IN")}/sqft</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:5px">
+          <span style="color:var(--txt2)">Forced Sale Value (${Math.round(tc.fsv*100)}%)</span>
+          <span style="font-weight:700;font-family:monospace;color:var(--navy)">
+            ₹${Math.round(fmv.fmv*tc.fsv/10)*10).toLocaleString("en-IN"}/sqft</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.78rem">
+          <span style="color:var(--txt2)">LTV Range</span>
+          <span style="font-weight:700;color:var(--navy)">${tc.ltvRec}% – ${tc.ltvMax}%</span>
+        </div>
+      </div>
+
+      <!-- Range bar -->
+      <div style="padding:10px 18px;border-bottom:1px solid var(--bdr)">
+        <div style="display:flex;justify-content:space-between;font-size:.62rem;
+          color:var(--muted);margin-bottom:5px">
+          <span>₹${fmv.min.toLocaleString("en-IN")} (min)</span>
+          <span style="color:var(--org);font-weight:700">
+            ₹${fmv.fmv.toLocaleString("en-IN")} FMV</span>
+          <span>₹${fmv.max.toLocaleString("en-IN")} (max)</span>
+        </div>
+        <div style="background:var(--surf2);height:6px;border-radius:3px;overflow:hidden;position:relative">
+          <div style="position:absolute;left:0;top:0;height:100%;border-radius:3px;
+            background:linear-gradient(90deg,var(--grn),var(--org));
+            width:${Math.min(100,Math.round((fmv.fmv-fmv.min)/(fmv.max-fmv.min||1)*100))}%">
+          </div>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div style="display:flex;gap:8px;padding:12px 18px">
+        <button onclick="copyFMVSummary();document.getElementById('fmvModal').remove()"
+          style="flex:1;padding:9px;background:var(--surf);border:1.5px solid var(--bdr);
+            border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer;
+            color:var(--navy);font-family:'Inter',sans-serif;transition:all .2s"
+          onmouseover="this.style.borderColor='var(--org)'"
+          onmouseout="this.style.borderColor='var(--bdr)'">
+          📋 Copy Summary
+        </button>
+        <button onclick="document.getElementById('fmvModal').remove();exportFMVReport()"
+          style="flex:1;padding:9px;background:var(--navy);border:none;border-radius:7px;
+            font-size:.78rem;font-weight:600;cursor:pointer;color:#FFF;
+            font-family:'Inter',sans-serif;transition:all .2s"
+          onmouseover="this.style.background='var(--navy2)'"
+          onmouseout="this.style.background='var(--navy)'">
+          🖨 Full Report
+        </button>
+      </div>
+
+      <div style="padding:7px 18px 10px;font-size:.6rem;color:var(--mutl);
+        text-align:center;line-height:1.5">
+        As of ${today} · For UGRO internal collateral assessment only
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener("click",e=>{if(e.target===modal)modal.remove();});
+}
+
+
   const pin=document.getElementById("fmvPin").value;
   if(pin.match(/^\d{6}$/)){document.getElementById("pinIn").value=pin;switchTab(1);doSearch();}
 }
