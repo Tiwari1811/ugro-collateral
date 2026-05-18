@@ -784,6 +784,15 @@ def scrape_rajasthan_dlc_gv():
 
 
 def scrape_haryana_dlc_gv():
+    """
+    NOTE: Jamabandi Haryana and HRERA rates have been found to be
+    significantly inflated vs actual market. This function is disabled.
+    Use manual branch entries for Haryana rates instead.
+    """
+    log.info("── Haryana GV skipped (Jamabandi/HRERA rates unreliable) ──")
+    return []
+
+def _scrape_haryana_dlc_gv_disabled():
     """Jamabandi Haryana Collector Rates — ₹/sqyard → ₹/sqft"""
     log.info("── Jamabandi Haryana (DLC GV) ───────────────────────")
     results = []
