@@ -1211,69 +1211,102 @@ var GL = { lat:null, lng:null, pin:null, state:null, dist:null, addr:'', acc:nul
 function glInit() { glRenderEntries(); }
 
 function glDetect() {
-  if (!navigator.geolocation) { tn('Geolocation not supported'); return; }
-  glStat('Requesting GPS...', '#FFF8E6', '#C47A00');
+  if (!navigator.geolocation) {
+    glStat('Geolocation not supported — enter coordinates manually','#FDECEA','#C0392B');
+    return;
+  }
+  glStat('Requesting GPS... (check browser permission bar)','#FFF8E6','#C47A00');
   navigator.geolocation.getCurrentPosition(
     function(pos) {
-      var lat=pos.coords.latitude, lng=pos.coords.longitude;
-      GL.acc = pos.coords.accuracy ? Math.round(pos.coords.accuracy)+'m' : '~';
-      document.getElementById('gl-lat').value = lat.toFixed(6);
-      document.getElementById('gl-lng').value = lng.toFixed(6);
-      glStat('GPS acquired ('+GL.acc+' accuracy). Resolving pincode...','#FFF8E6','#C47A00');
-      glResolve(lat, lng);
+      try {
+        var lat=pos.coords.latitude, lng=pos.coords.longitude;
+        GL.acc=pos.coords.accuracy ? Math.round(pos.coords.accuracy)+'m' : '~';
+        document.getElementById('gl-lat').value=lat.toFixed(6);
+        document.getElementById('gl-lng').value=lng.toFixed(6);
+        glStat('GPS acquired ('+GL.acc+' accuracy). Resolving...','#FFF8E6','#C47A00');
+        glResolve(lat, lng);
+      } catch(e) {
+        glStat('GPS error: '+e.message,'#FDECEA','#C0392B');
+      }
     },
     function(err) {
-      var m = err.code===1 ? 'Permission denied — enter coordinates manually' :
-              err.code===2 ? 'Position unavailable — enter coordinates manually' :
-                             'Timeout — enter coordinates manually';
-      glStat(m, '#FDECEA', '#C0392B');
+      var m = err.code===1 ? 'Location permission denied. Enter coordinates manually.' :
+              err.code===2 ? 'Position unavailable. Enter coordinates manually.' :
+                             'GPS timed out. Enter coordinates manually.';
+      glStat(m,'#FDECEA','#C0392B');
     },
-    { enableHighAccuracy:true, timeout:12000, maximumAge:0 }
+    {enableHighAccuracy:true,timeout:12000,maximumAge:0}
   );
 }
 
 function glFetch() {
-  var lat=parseFloat(document.getElementById('gl-lat').value);
-  var lng=parseFloat(document.getElementById('gl-lng').value);
-  if (isNaN(lat)||isNaN(lng)) { tn('Enter valid latitude and longitude'); return; }
-  if (lat<6||lat>37||lng<68||lng>98) { tn('Coordinates seem outside India (lat 6-37, lng 68-98)'); return; }
-  GL.acc='Manual entry';
-  glStat('Resolving to nearest pincode...','#FFF8E6','#C47A00');
-  glResolve(lat, lng);
+  try {
+    var lat=parseFloat(document.getElementById('gl-lat').value);
+    var lng=parseFloat(document.getElementById('gl-lng').value);
+    if (isNaN(lat)||isNaN(lng)) { tn('Enter valid latitude and longitude'); return; }
+    if (lat<6||lat>37||lng<68||lng>98) {
+      glStat('Coordinates outside India (lat 6–37, lng 68–98). Please recheck.','#FDECEA','#C0392B');
+      return;
+    }
+    GL.acc='Manual entry';
+    glStat('Resolving to nearest pincode...','#FFF8E6','#C47A00');
+    glResolve(lat, lng);
+  } catch(e) {
+    glStat('Error: '+e.message,'#FDECEA','#C0392B');
+  }
 }
 
 function glResolve(lat, lng) {
-  if (!ready) { glStat('DB still loading, please wait...','#FFF8E6','#C47A00'); return; }
-  var best=null, bestD=Infinity;
-  for (var p in DB) {
-    var d=DB[p]; if (!d[2]||!d[3]) continue;
-    var dd=(lat-d[2])*(lat-d[2])+(lng-d[3])*(lng-d[3]);
-    if (dd<bestD){bestD=dd;best=p;}
-  }
-  if (!best){glStat('No pincode found for these coordinates','#FDECEA','#C0392B');return;}
-  var km=Math.round(Math.sqrt(bestD)*111);
-  GL.lat=lat; GL.lng=lng; GL.pin=best;
-  GL.state=DB[best][0]; GL.dist=DB[best][1];
-  /* Try Nominatim reverse geocode */
-  fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat='+lat+'&lon='+lng+'&zoom=16&addressdetails=1',
-    {headers:{'Accept-Language':'en'}})
-    .then(function(r){return r.ok?r.json():null;})
-    .then(function(data){
-      var addr='';
-      if(data&&data.address){
+  try {
+    if (!ready) { glStat('Database loading, please wait...','#FFF8E6','#C47A00'); return; }
+
+    /* ── Step 1: Find nearest pincode (synchronous, always works) ── */
+    var best=null, bestD=Infinity;
+    for (var p in DB) {
+      var d=DB[p]; if (!d[2]||!d[3]) continue;
+      var dd=(lat-d[2])*(lat-d[2])+(lng-d[3])*(lng-d[3]);
+      if (dd<bestD){bestD=dd;best=p;}
+    }
+    if (!best) { glStat('No pincode resolved. Database may still be loading.','#FDECEA','#C0392B'); return; }
+
+    var km=Math.round(Math.sqrt(bestD)*111);
+    GL.lat=lat; GL.lng=lng; GL.pin=best;
+    GL.state=DB[best][0]; GL.dist=DB[best][1];
+    GL.addr=(GL.dist?GL.dist+', ':'')+GL.state; /* default address */
+
+    /* ── Step 2: Show results immediately with available data ── */
+    glShow(best, km);
+
+    /* ── Step 3: Try Nominatim for better address (fire-and-forget) ── */
+    fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat='+lat+'&lon='+lng+'&zoom=16&addressdetails=1',
+      {headers:{'Accept-Language':'en','User-Agent':'UGROCollateral/1.0'}})
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(data){
+        if(!data||!data.address) return;
         var a=data.address;
-        addr=[a.road||a.pedestrian||a.neighbourhood,a.suburb||a.town||a.village,a.city||a.county,a.state].filter(Boolean).join(', ');
-      }
-      GL.addr=addr||(GL.dist?GL.dist+', ':'')+GL.state;
-      glShow(best,km);
-    })
-    .catch(function(){
-      GL.addr=(GL.dist?GL.dist+', ':'')+GL.state;
-      glShow(best,km);
-    });
+        var addr=[a.road||a.pedestrian||a.neighbourhood,
+                  a.suburb||a.town||a.village,
+                  a.city||a.county,a.state].filter(Boolean).join(', ');
+        if(addr){
+          GL.addr=addr;
+          /* Update address fields without re-running full glShow */
+          var ct=document.getElementById('gl-addrtag');
+          var ln=document.getElementById('gl-locname');
+          if(ct) ct.textContent=addr;
+          if(ln) ln.textContent=(GL.dist?GL.dist+', ':'')+GL.state+' (~'+km+'km) — '+addr.slice(0,40);
+        }
+      })
+      .catch(function(){/* Nominatim unavailable — address stays as district/state */});
+
+  } catch(e) {
+    glStat('Resolution error: '+e.message,'#FDECEA','#C0392B');
+    console.error('glResolve error:', e);
+  }
 }
 
+
 function glShow(pin,km){
+  try {
   var t=tr(GL.state,pin), p=pr(pin,GL.state,t), tc=TC[t];
   var sc={METRO:88,URBAN:74,SEMI:58,RURAL:42}[t];
   var scCol=sc>75?'#0D7A4C':sc>55?'#C47A00':'#C0392B';
@@ -1327,6 +1360,10 @@ function glShow(pin,km){
   /* Compute distance-weighted FMV from all team entries */
   glComputeGeoFMV();
   glRenderEntries();
+  } catch(e) {
+    glStat('Display error: '+e.message,'#FDECEA','#C0392B');
+    console.error('glShow error:',e);
+  }
 }
 
 
