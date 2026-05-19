@@ -750,7 +750,7 @@ function rndrE(fp){
       +'<div style="text-align:right"><div class="enr">'+fmt(e.marketRate)+'<span style="font-size:.6rem;color:var(--mu)">/sqft</span></div>'
       +(e.guidelineValue?'<div style="font-size:.64rem;color:var(--g)">GV: '+fmt(e.guidelineValue)+'</div>':'')
       +'</div></div>'
-      +'<span class="edl" onclick="dlE(''+e._pin+'','+e.id+')">&#10005;</span>'
+      +'<span class="edl" onclick="dlE('+e._pin+','+e.id+')">&#10005;</span>'
       +'</div>';
   }).join('');
 }
@@ -770,8 +770,7 @@ function exJ(){
 function exC(){
   var d=gAD();var rows=[['Pincode','Market Rate','GV','Property Type','Source','Entered By','Date']];
   for(var pin in d)d[pin].forEach(function(e){rows.push([pin,e.marketRate,e.guidelineValue||'',e.propertyType,e.source,e.enteredBy,e.date]);});
-  var csv=rows.map(function(r){return r.map(function(v){return'"'+v+'"';}).join(',');}).join('
-');
+  var csv=rows.map(function(r){return r.map(function(v){return'"'+v+'"';}).join(',');}).join('\n');
   var blob=new Blob([csv],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ugro_rates_'+new Date().toISOString().slice(0,10)+'.csv';a.click();tn('CSV exported');
 }
 function impJ(event){
@@ -845,20 +844,13 @@ function gfmv(){
 function mfmv(){
   if(!LF){tn('Generate FMV first');return;}
   var x=LF;var cc=x.fmv.conf==='HIGH'?'#0D7A4C':x.fmv.conf==='MEDIUM'?'#C47A00':'#C0392B';
-  var txt='UGRO Collateral Intelligence - FMV Report
-'
-    +'Pincode: '+x.pin+' | '+(x.dist?x.dist+', ':'')+x.state+'
-'
-    +'Fair Market Value: '+fmt(x.fmv.fmv)+'/sqft ('+fsm(x.fmv.fmv)+')
-'
-    +'Guideline Value: '+fmt(x.gvd)+'/sqft
-'
-    +'Market Premium: +'+x.prm+'%
-'
-    +'Data Points: '+x.fmv.count+' | Confidence: '+x.fmv.conf+'
-'
-    +'Max Collateral: '+fmt(x.col)+'/sqft at '+x.tc.lr+'% LTV
-'
+  var txt='UGRO Collateral Intelligence - FMV Report\n'
+    +'Pincode: '+x.pin+' | '+(x.dist?x.dist+', ':'')+x.state+'\n'
+    +'Fair Market Value: '+fmt(x.fmv.fmv)+'/sqft ('+fsm(x.fmv.fmv)+')\n'
+    +'Guideline Value: '+fmt(x.gvd)+'/sqft\n'
+    +'Market Premium: +'+x.prm+'%\n'
+    +'Data Points: '+x.fmv.count+' | Confidence: '+x.fmv.conf+'\n'
+    +'Max Collateral: '+fmt(x.col)+'/sqft at '+x.tc.lr+'% LTV\n'
     +'Generated: '+new Date().toLocaleString('en-IN');
   navigator.clipboard.writeText(txt).then(function(){tn('FMV copied to clipboard');}).catch(function(){tn('Copy failed - check browser permissions');});
 }
