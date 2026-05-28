@@ -768,7 +768,7 @@ var SK='ugro_v1';
 var TC={METRO:{l:'Metro',c:'tm',gi:0,lm:65,lr:55,cl:'#F47920',fv:.70},URBAN:{l:'Urban',c:'tu',gi:2,lm:65,lr:55,cl:'#2E6B9E',fv:.75},SEMI:{l:'Semi-Urban',c:'ts',gi:4,lm:70,lr:60,cl:'#C47A00',fv:.80},RURAL:{l:'Rural',c:'tr',gi:6,lm:75,lr:65,cl:'#0D7A4C',fv:.85}};
 var MP=['110','400','600','560','500','700','380','411','122','123'];
 var MS=['DELHI','MAHARASHTRA','TAMIL NADU','KARNATAKA','TELANGANA','GUJARAT'];
-var DB={},ready=false,MAP,MKR,CI=[],LAST={},RERA={},LF=null;
+var DB={},ready=false,MAP,MKR,CI=[],LAST={},RERA={},LF=null,GEO_CIRCLE=null,GEO_MARKERS=[];
 
 function tr(s,p){if(MP.some(function(x){return p.indexOf(x)===0;}))return'METRO';if(MS.indexOf(s)>-1)return'URBAN';return'SEMI';}
 function sr2(s,a,b){var x=Math.sin(s*9301+49297)*233280;return a+(x-Math.floor(x))*(b-a);}
@@ -1558,12 +1558,11 @@ function lmFetch() {
   if (lat < 6 || lat > 37 || lng < 68 || lng > 98) { tn('Coordinates outside India (lat 6–37°N, lng 68–98°E)'); return; }
   if (!ready) { tn('Database loading — please wait'); return; }
 
-  /* Find nearest pincode: squared-euclidean over lat/lng (sufficient for nearest-neighbour) */
+  /* Find nearest pincode */
   var best = null, bestD = Infinity;
   for (var p in DB) {
-    var d = DB[p];
-    if (!d[2] || !d[3]) continue;
-    var dd = (lat - d[2]) * (lat - d[2]) + (lng - d[3]) * (lng - d[3]);
+    var d = DB[p]; if (!d[2] || !d[3]) continue;
+    var dd = (lat-d[2])*(lat-d[2]) + (lng-d[3])*(lng-d[3]);
     if (dd < bestD) { bestD = dd; best = p; }
   }
   if (!best) { tn('Could not resolve to a pincode'); return; }
@@ -1572,27 +1571,78 @@ function lmFetch() {
   LM.lat = lat; LM.lng = lng; LM.pin = best;
 
   var e = DB[best];
-  var state = e[0], dist = e[1], eLat = e[2], eLng = e[3];
+  var state = e[0], dist = e[1];
   var t = tr(state, best), p = pr(best, state, t);
   LAST = { pin: best, state: state, dist: dist, t: t, p: p };
 
-  /* Reuse existing rndr() — populates the full result card */
   rndr(best, state, dist, t, p);
-  uMap(lat, lng, best, state, dist, t, p);
 
-  /* Sync radius selector between header and panel */
-  var rad = document.getElementById('lm-rad').value;
+  /* Draw centre crosshair marker at exact input coordinates */
+  if (MKR) MAP.removeLayer(MKR);
+  var crossIcon = L.divIcon({
+    className: '',
+    html: '<div style="position:relative;width:20px;height:20px">'
+        + '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:14px;height:14px;background:#F47920;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.4)"></div>'
+        + '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:24px;height:2px;background:rgba(244,121,32,.5)"></div>'
+        + '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:2px;height:24px;background:rgba(244,121,32,.5)"></div>'
+        + '</div>',
+    iconSize: [20, 20], iconAnchor: [10, 10]
+  });
+  MKR = L.marker([lat, lng], { icon: crossIcon })
+    .bindPopup('<b style="color:#F47920">📍 Input Location</b><br>'
+      + lat.toFixed(5) + '°N, ' + lng.toFixed(5) + '°E<br>'
+      + 'Nearest pin: <b>' + best + '</b> (~' + km + 'km)<br>'
+      + 'Model MV: ' + fmt(p.mv) + '/sqft')
+    .addTo(MAP);
+  MKR.openPopup();
+
+  /* Sync radius and draw circle */
+  var rad = parseFloat(document.getElementById('lm-rad').value) || 5;
   document.getElementById('lm-rad2').value = rad;
+  lmDrawCircle(lat, lng, rad);
 
+  MAP.flyTo([lat, lng], lmZoomForRadius(rad), { duration: 1.2 });
   tn('Resolved to ' + best + ' — ' + (dist || state) + ' (~' + km + 'km centroid)');
   lmNearby();
 }
 
+
 /* Recompute when radius selector in panel changes */
 function lmRadius() {
-  document.getElementById('lm-rad').value = document.getElementById('lm-rad2').value;
+  var rad = parseFloat(document.getElementById('lm-rad2').value) || 5;
+  document.getElementById('lm-rad').value = rad;
+  if (LM.lat) {
+    lmDrawCircle(LM.lat, LM.lng, rad);
+    MAP.flyTo([LM.lat, LM.lng], lmZoomForRadius(rad), { duration: 0.8 });
+  }
   lmNearby();
 }
+
+/* Draw/redraw the radius circle on the map */
+function lmDrawCircle(lat, lng, rad) {
+  if (GEO_CIRCLE) MAP.removeLayer(GEO_CIRCLE);
+  GEO_CIRCLE = L.circle([lat, lng], {
+    radius: rad * 1000,          /* metres */
+    color: '#F47920',
+    weight: 2,
+    opacity: 0.9,
+    fillColor: '#F47920',
+    fillOpacity: 0.07,
+    dashArray: '6 4'
+  }).addTo(MAP);
+}
+
+/* Pick a sensible zoom level for the radius */
+function lmZoomForRadius(rad) {
+  return rad <= 2 ? 14 : rad <= 5 ? 13 : rad <= 10 ? 12 : rad <= 25 ? 11 : 10;
+}
+
+/* Remove all comparable markers from the map */
+function lmClearMarkers() {
+  GEO_MARKERS.forEach(function(m) { MAP.removeLayer(m); });
+  GEO_MARKERS = [];
+}
+
 
 /* Haversine distance in km */
 function lmHav(a, b, c, d) {
@@ -1752,6 +1802,35 @@ function lmNearby() {
 
       + '</div>';
   }).join('');
+
+  /* ── Plot comparable markers on map ── */
+  lmClearMarkers();
+  hits.forEach(function(h, i) {
+    var w     = Math.round(weights[i] / wsum * 100);
+    var r     = Math.max(6, Math.min(16, 6 + w / 8));        /* radius px scaled by weight */
+    var color = w > 30 ? '#0D7A4C' : w > 15 ? '#F47920' : '#2E6B9E';
+    var eLat  = (h.e.geo && h.e.geo.lat) ? h.e.geo.lat : (DB[h.pin] ? DB[h.pin][2] : null);
+    var eLng  = (h.e.geo && h.e.geo.lng) ? h.e.geo.lng : (DB[h.pin] ? DB[h.pin][3] : null);
+    if (!eLat || !eLng) return;
+    var marker = L.circleMarker([eLat, eLng], {
+      radius: r,
+      color: '#fff',
+      weight: 1.5,
+      fillColor: color,
+      fillOpacity: 0.85
+    }).bindPopup(
+      '<div style="font-size:12px;min-width:140px">'
+      + '<b style="color:#F47920">' + h.pin + '</b>'
+      + (h.gps ? ' <span style="font-size:10px;background:#E8F5EE;color:#0D7A4C;padding:1px 4px;border-radius:2px">GPS</span>' : '')
+      + '<br><b>' + fmt(h.e.marketRate) + ' /sqft</b>'
+      + (h.e.guidelineValue ? '<br>GV: ' + fmt(h.e.guidelineValue) : '')
+      + '<br>' + h.e.propertyType + ' — ' + h.dist.toFixed(2) + 'km away'
+      + '<br><span style="color:#F47920;font-weight:700">Weight: ' + w + '%</span>'
+      + '<br><span style="color:#64748B;font-size:11px">' + h.e.enteredBy + ' · ' + h.e.date + '</span>'
+      + '</div>'
+    ).addTo(MAP);
+    GEO_MARKERS.push(marker);
+  });
 }
 
 </script>
