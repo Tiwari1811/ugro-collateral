@@ -273,17 +273,47 @@ select:focus{border-color:var(--o)}
   <!-- TAB 1 LOOKUP -->
   <div class="tc on" id="tc1">
     <div class="szn">
-      <div class="szl">Pincode Lookup</div>
-      <input class="si" id="pi" type="text" maxlength="6" inputmode="numeric" placeholder="Enter 6-digit pincode...">
-      <div class="qps">
-        <span class="qp" onclick="sp('110001')">110001 Delhi</span>
-        <span class="qp" onclick="sp('400001')">400001 Mumbai</span>
-        <span class="qp" onclick="sp('560001')">560001 Bengaluru</span>
-        <span class="qp" onclick="sp('600001')">600001 Chennai</span>
-        <span class="qp" onclick="sp('500001')">500001 Hyderabad</span>
-        <span class="qp" onclick="sp('411001')">411001 Pune</span>
+      <!-- Mode toggle -->
+      <div style="display:flex;gap:1px;margin-bottom:10px;border-radius:6px;overflow:hidden;border:1px solid rgba(255,255,255,.12)">
+        <button id="lm-pin" onclick="lmSwitch('pin')" style="flex:1;padding:6px 4px;font-size:.68rem;font-weight:600;cursor:pointer;border:none;background:var(--o);color:#fff;transition:background .15s">&#128290; Pincode</button>
+        <button id="lm-geo" onclick="lmSwitch('geo')" style="flex:1;padding:6px 4px;font-size:.68rem;font-weight:600;cursor:pointer;border:none;background:rgba(255,255,255,.07);color:rgba(255,255,255,.55);transition:background .15s">&#127757; Lat / Long</button>
       </div>
-      <button class="sbtn" onclick="ds()">&#128269; Fetch Valuation Report</button>
+
+      <!-- Pincode mode -->
+      <div id="lm-pin-row">
+        <div class="szl">Pincode Lookup</div>
+        <input class="si" id="pi" type="text" maxlength="6" inputmode="numeric" placeholder="Enter 6-digit pincode...">
+        <div class="qps">
+          <span class="qp" onclick="sp('110001')">110001 Delhi</span>
+          <span class="qp" onclick="sp('400001')">400001 Mumbai</span>
+          <span class="qp" onclick="sp('560001')">560001 Bengaluru</span>
+          <span class="qp" onclick="sp('600001')">600001 Chennai</span>
+          <span class="qp" onclick="sp('500001')">500001 Hyderabad</span>
+          <span class="qp" onclick="sp('411001')">411001 Pune</span>
+        </div>
+        <button class="sbtn" onclick="ds()">&#128269; Fetch Valuation Report</button>
+      </div>
+
+      <!-- Geo mode -->
+      <div id="lm-geo-row" style="display:none">
+        <div class="szl">Lat / Long Lookup</div>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <input class="si" id="lm-lat" type="number" step="any" placeholder="Latitude  e.g. 28.6139" style="flex:1">
+          <input class="si" id="lm-lng" type="number" step="any" placeholder="Longitude  e.g. 77.2090" style="flex:1">
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
+          <span style="font-size:.58rem;color:rgba(255,255,255,.45);white-space:nowrap">Radius:</span>
+          <select id="lm-rad" style="flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);color:#fff;font-size:.72rem;padding:5px 7px;border-radius:5px;outline:none;cursor:pointer">
+            <option value="2">2 km</option>
+            <option value="5" selected>5 km</option>
+            <option value="10">10 km</option>
+            <option value="25">25 km</option>
+            <option value="50">50 km</option>
+          </select>
+          <button onclick="lmGps()" style="flex:1;padding:6px 8px;background:rgba(13,122,76,.7);color:#fff;border:none;border-radius:5px;font-size:.68rem;font-weight:600;cursor:pointer">&#128205; GPS</button>
+        </div>
+        <button class="sbtn" onclick="lmFetch()">&#128269; Fetch FMV from Coordinates</button>
+      </div>
     </div>
     <div class="cv">
       <span>Convert:</span>
@@ -342,6 +372,51 @@ select:focus{border-color:var(--o)}
         <button class="sbtn" style="background:var(--n)" onclick="ge()">&#9998; Add Land Rates for this Pincode</button>
       </div>
     </div>
+    <!-- Geo radius panel: shown after lat/long lookup -->
+    <div id="lm-nearby" style="display:none;margin:10px 12px 0;border-radius:8px;border:1px solid var(--b);overflow:hidden">
+      <div style="background:linear-gradient(135deg,var(--n),var(--n2));padding:9px 13px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:.57rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:2px">Proximity-Weighted FMV</div>
+          <div id="lm-near-sub" style="font-size:.63rem;color:rgba(255,255,255,.75)">Team entries within radius</div>
+        </div>
+        <select id="lm-rad2" onchange="lmRadius()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:.68rem;padding:3px 7px;border-radius:4px;cursor:pointer;outline:none">
+          <option value="2">2 km</option>
+          <option value="5" selected>5 km</option>
+          <option value="10">10 km</option>
+          <option value="25">25 km</option>
+          <option value="50">50 km</option>
+        </select>
+      </div>
+      <!-- FMV summary row -->
+      <div class="rv" style="background:#fff">
+        <div class="rvc">
+          <div class="rvl" style="color:var(--o)">&#9679; Geo-Weighted FMV (IDW)</div>
+          <div class="rvv" id="lm-wfmv" style="color:var(--o)">&#8212;</div>
+          <div class="rvs" id="lm-winfo">&#8212;</div>
+        </div>
+        <div class="rvd"></div>
+        <div class="rvc">
+          <div class="rvl" style="color:var(--n4)">&#9679; Simple Average FMV</div>
+          <div class="rvv" style="color:var(--n4)" id="lm-sfmv">&#8212;</div>
+          <div class="rvs" id="lm-sinfo">&#8212;</div>
+        </div>
+      </div>
+      <!-- Stats -->
+      <div class="mr">
+        <div class="mc"><div class="mcl">Geo Max Collateral</div><div class="mcv" id="lm-wcol">&#8212;</div><div class="mcn" id="lm-wcoln">&#8212;</div></div>
+        <div class="mc"><div class="mcl">Geo FSV</div><div class="mcv" id="lm-wfsv">&#8212;</div><div class="mcn" id="lm-wfsvn">&#8212;</div></div>
+        <div class="mc"><div class="mcl">Confidence</div><div class="mcv" id="lm-wconf" style="font-size:.78rem">&#8212;</div><div class="mcn" id="lm-wpts">&#8212;</div></div>
+      </div>
+      <!-- Entry breakdown -->
+      <div id="lm-nlist-wrap" style="display:none">
+        <div style="padding:6px 12px;background:var(--s2);font-size:.56rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)">Contributing Entries</div>
+        <div id="lm-nlist"></div>
+      </div>
+      <div id="lm-nodata" style="padding:14px 12px;text-align:center;color:var(--ml);font-size:.72rem;display:none">
+        No team entries within radius. Add rates via &#9998; Enter Rates tab to improve geo-FMV accuracy.
+      </div>
+    </div>
+
     <div class="ps" id="cmps" style="display:none">
       <div class="fl">Comparison Queue</div>
       <div id="cml"></div>
@@ -1394,6 +1469,198 @@ function g4entries(){
 }
 
 loadDB();
+
+/* ═══════════════════════════════════════════════════
+   LAT/LONG LOOKUP — wired into Tab 1
+   ═══════════════════════════════════════════════════ */
+
+var LM = { lat:null, lng:null, pin:null };
+
+/* Toggle between pincode and geo input modes */
+function lmSwitch(mode) {
+  var isPinMode = mode === 'pin';
+  document.getElementById('lm-pin-row').style.display = isPinMode ? 'block' : 'none';
+  document.getElementById('lm-geo-row').style.display = isPinMode ? 'none' : 'block';
+  document.getElementById('lm-pin').style.background = isPinMode ? 'var(--o)' : 'rgba(255,255,255,.07)';
+  document.getElementById('lm-pin').style.color = isPinMode ? '#fff' : 'rgba(255,255,255,.55)';
+  document.getElementById('lm-geo').style.background = isPinMode ? 'rgba(255,255,255,.07)' : 'var(--o)';
+  document.getElementById('lm-geo').style.color = isPinMode ? 'rgba(255,255,255,.55)' : '#fff';
+  if (isPinMode) document.getElementById('lm-nearby').style.display = 'none';
+}
+
+/* GPS button in geo mode */
+function lmGps() {
+  if (!navigator.geolocation) { tn('Geolocation not supported — enter coordinates manually'); return; }
+  tn('Requesting GPS location...');
+  navigator.geolocation.getCurrentPosition(
+    function(pos) {
+      document.getElementById('lm-lat').value = pos.coords.latitude.toFixed(6);
+      document.getElementById('lm-lng').value = pos.coords.longitude.toFixed(6);
+      tn('GPS acquired — tap Fetch FMV');
+    },
+    function(e) {
+      tn(e.code === 1 ? 'Location permission denied' : 'GPS unavailable — enter manually');
+    },
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+  );
+}
+
+/* Main fetch: resolve lat/lng → nearest pincode → rndr() + lmNearby() */
+function lmFetch() {
+  var lat = parseFloat(document.getElementById('lm-lat').value);
+  var lng = parseFloat(document.getElementById('lm-lng').value);
+  if (isNaN(lat) || isNaN(lng)) { tn('Enter valid latitude and longitude'); return; }
+  if (lat < 6 || lat > 37 || lng < 68 || lng > 98) { tn('Coordinates outside India (lat 6–37°N, lng 68–98°E)'); return; }
+  if (!ready) { tn('Database loading — please wait'); return; }
+
+  /* Find nearest pincode: squared-euclidean over lat/lng (sufficient for nearest-neighbour) */
+  var best = null, bestD = Infinity;
+  for (var p in DB) {
+    var d = DB[p];
+    if (!d[2] || !d[3]) continue;
+    var dd = (lat - d[2]) * (lat - d[2]) + (lng - d[3]) * (lng - d[3]);
+    if (dd < bestD) { bestD = dd; best = p; }
+  }
+  if (!best) { tn('Could not resolve to a pincode'); return; }
+
+  var km = Math.round(Math.sqrt(bestD) * 111);
+  LM.lat = lat; LM.lng = lng; LM.pin = best;
+
+  var e = DB[best];
+  var state = e[0], dist = e[1], eLat = e[2], eLng = e[3];
+  var t = tr(state, best), p = pr(best, state, t);
+  LAST = { pin: best, state: state, dist: dist, t: t, p: p };
+
+  /* Reuse existing rndr() — populates the full result card */
+  rndr(best, state, dist, t, p);
+  uMap(lat, lng, best, state, dist, t, p);
+
+  /* Sync radius selector between header and panel */
+  var rad = document.getElementById('lm-rad').value;
+  document.getElementById('lm-rad2').value = rad;
+
+  tn('Resolved to ' + best + ' — ' + (dist || state) + ' (~' + km + 'km centroid)');
+  lmNearby();
+}
+
+/* Recompute when radius selector in panel changes */
+function lmRadius() {
+  document.getElementById('lm-rad').value = document.getElementById('lm-rad2').value;
+  lmNearby();
+}
+
+/* Haversine distance in km */
+function lmHav(a, b, c, d) {
+  var R = 6371, pr = Math.PI / 180;
+  var dLat = (c - a) * pr, dLng = (d - b) * pr;
+  var x = Math.sin(dLat/2)*Math.sin(dLat/2) +
+          Math.cos(a*pr)*Math.cos(c*pr)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+/* Build the proximity-weighted FMV panel */
+function lmNearby() {
+  if (!LM.lat) return;
+  var rad = parseFloat(document.getElementById('lm-rad2').value) || 5;
+  var all = gAD(), hits = [];
+
+  for (var pin in all) {
+    var dbr = DB[pin];
+    all[pin].forEach(function(e) {
+      if (!e.marketRate || e.marketRate < 1) return;
+      /* Prefer GPS tag on entry; fall back to pincode centroid */
+      var eLat = (e.geo && e.geo.lat) ? e.geo.lat : (dbr ? dbr[2] : null);
+      var eLng = (e.geo && e.geo.lng) ? e.geo.lng : (dbr ? dbr[3] : null);
+      if (!eLat || !eLng) return;
+      var dist = lmHav(LM.lat, LM.lng, eLat, eLng);
+      if (dist <= rad) hits.push({ e: e, pin: pin, dist: dist, precise: !!(e.geo && e.geo.lat) });
+    });
+  }
+
+  var panel = document.getElementById('lm-nearby');
+  panel.style.display = 'block';
+
+  if (!hits.length) {
+    document.getElementById('lm-nodata').style.display = 'block';
+    document.getElementById('lm-nlist-wrap').style.display = 'none';
+    document.getElementById('lm-wfmv').textContent = '—';
+    document.getElementById('lm-winfo').textContent = 'No team entries within ' + rad + 'km';
+    document.getElementById('lm-sfmv').textContent = '—';
+    document.getElementById('lm-sinfo').textContent = 'Add rates via Enter Rates tab';
+    document.getElementById('lm-wcol').textContent = '—';
+    document.getElementById('lm-wfsv').textContent = '—';
+    document.getElementById('lm-wconf').textContent = 'No Data';
+    document.getElementById('lm-wconf').style.color = 'var(--ml)';
+    document.getElementById('lm-wpts').textContent = 'Showing model values only';
+    document.getElementById('lm-near-sub').textContent = '0 entries within ' + rad + 'km';
+    return;
+  }
+
+  document.getElementById('lm-nodata').style.display = 'none';
+  hits.sort(function(a, b) { return a.dist - b.dist; });
+  var rates = hits.map(function(h) { return h.e.marketRate; });
+
+  /* Inverse Distance Weighting — power 2 */
+  var weights = hits.map(function(h) { var d = Math.max(h.dist, 0.01); return 1 / (d * d); });
+  var wsum = weights.reduce(function(s, w) { return s + w; }, 0);
+  var wfmv = Math.round(weights.reduce(function(s, w, i) { return s + w * rates[i]; }, 0) / wsum / 10) * 10;
+  var sfmv = Math.round(rates.reduce(function(s, v) { return s + v; }, 0) / rates.length / 10) * 10;
+  var mn = Math.min.apply(null, rates), mx = Math.max.apply(null, rates);
+  var sd = rates.length > 1
+    ? Math.round(Math.sqrt(rates.reduce(function(s, v) { return s + Math.pow(v - wfmv, 2); }, 0) / rates.length))
+    : 0;
+  var cv = wfmv > 0 ? Math.round(sd / wfmv * 100) : 0;
+  var conf = hits.length >= 5 && cv < 15 ? 'HIGH' : hits.length >= 3 || cv < 25 ? 'MEDIUM' : 'LOW';
+  var confC = { HIGH: 'var(--g)', MEDIUM: 'var(--a)', LOW: 'var(--r)' }[conf];
+
+  /* Use nearest resolved pincode's zone params */
+  var t = LAST.t || 'SEMI';
+  var tc = TC[t];
+  var wcol = Math.round(wfmv * (tc.lr / 100) / 10) * 10;
+  var wfsv = Math.round(wfmv * tc.fv / 10) * 10;
+  var modelMV = LAST.p ? LAST.p.mv : 0;
+  var vs = modelMV > 0 ? ' | ' + (wfmv >= modelMV ? '+' : '') + Math.round((wfmv / modelMV - 1) * 100) + '% vs model' : '';
+
+  /* Render summary */
+  document.getElementById('lm-near-sub').textContent = hits.length + ' entr' + (hits.length === 1 ? 'y' : 'ies') + ' within ' + rad + 'km';
+  document.getElementById('lm-wfmv').textContent = fmt(wfmv) + ' /sqft';
+  document.getElementById('lm-winfo').textContent = hits.length + ' entries | SD: ' + (sd ? fmt(sd) + ' (CV ' + cv + '%)' : 'N/A') + ' | Range: ' + fmt(mn) + '–' + fmt(mx) + vs;
+  document.getElementById('lm-sfmv').textContent = fmt(sfmv) + ' /sqft';
+  document.getElementById('lm-sinfo').textContent = 'Nearest: ' + fmt(hits[0].e.marketRate) + ' @ ' + hits[0].dist.toFixed(2) + 'km (' + hits[0].pin + ')';
+  document.getElementById('lm-wcol').textContent = fmt(wcol);
+  document.getElementById('lm-wcoln').textContent = 'At ' + tc.lr + '% of Geo-FMV';
+  document.getElementById('lm-wfsv').textContent = fmt(wfsv);
+  document.getElementById('lm-wfsvn').textContent = Math.round(tc.fv * 100) + '% of Geo-FMV (FSV)';
+  document.getElementById('lm-wconf').textContent = conf;
+  document.getElementById('lm-wconf').style.color = confC;
+  document.getElementById('lm-wpts').textContent = hits.length + ' data point' + (hits.length === 1 ? '' : 's');
+
+  /* Entry breakdown */
+  document.getElementById('lm-nlist-wrap').style.display = 'block';
+  document.getElementById('lm-nlist').innerHTML = hits.slice(0, 15).map(function(h, i) {
+    var w = Math.round(weights[i] / wsum * 100);
+    var gvStr = h.e.guidelineValue ? ' | GV ' + fmt(h.e.guidelineValue) : '';
+    return '<div style="padding:8px 12px;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:8px;font-size:.7rem">'
+      + '<span style="font-family:monospace;font-size:.65rem;font-weight:700;color:var(--o);background:var(--op);padding:1px 6px;border-radius:3px;flex-shrink:0">' + h.pin + '</span>'
+      + '<div style="flex:1;min-width:0">'
+      + '<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">'
+      + '<b style="color:var(--n)">' + fmt(h.e.marketRate) + '</b>'
+      + '<span style="color:var(--mu);font-size:.62rem">' + h.e.propertyType + gvStr + '</span>'
+      + (h.precise ? '<span style="font-size:.55rem;background:var(--gb);color:var(--g);padding:1px 5px;border-radius:2px">GPS</span>'
+                   : '<span style="font-size:.55rem;background:var(--np);color:var(--n4);padding:1px 5px;border-radius:2px">Centroid</span>')
+      + '</div>'
+      + '<div style="height:4px;background:var(--s2);border-radius:2px;overflow:hidden">'
+      + '<div style="height:100%;width:' + Math.max(w, 2) + '%;background:' + (w > 30 ? 'var(--g)' : w > 15 ? 'var(--o)' : 'var(--n4)') + ';border-radius:2px;transition:width .6s"></div>'
+      + '</div>'
+      + '<div style="font-size:.58rem;color:var(--mu);margin-top:2px">' + h.e.enteredBy + ' — ' + h.e.date + ' — ' + h.e.source + '</div>'
+      + '</div>'
+      + '<div style="text-align:right;flex-shrink:0">'
+      + '<div style="font-size:.72rem;font-weight:700;color:var(--n)">' + h.dist.toFixed(2) + 'km</div>'
+      + '<div style="font-size:.62rem;color:var(--o);font-weight:600">wt ' + w + '%</div>'
+      + '</div>'
+      + '</div>';
+  }).join('') + (hits.length > 15 ? '<div style="padding:5px 12px;font-size:.6rem;color:var(--ml);text-align:center">+' + (hits.length - 15) + ' more entries</div>' : '');
+}
 </script>
 </body>
 </html>
