@@ -636,10 +636,10 @@ img#lg{height:26px;width:auto;display:none}
 <script>
 /* ── LOGIN GATE ── */
 var LG_USERS = {
-  'ugro_admin':    'e61a07770d06229c19615d2599272a5a',  /* UGRO@2024  */
-  'collateral_hd': 'fe50d90cd37df429b40a07f324c8dde7',  /* Coll@2024! */
-  'field_user':    'eedc3e351d828731f6124d2d575c78ce',  /* Field@123  */
-  'ugro_view':     '623b0fb97e16ae7b20a764e324443218',  /* View@2024  */
+  'ugro_admin':    '2e27f54f',  /* UGRO@2024  */
+  'collateral_hd': 'fc2e02b1',  /* Coll@2024! */
+  'field_user':    'e20e0e91',  /* Field@123  */
+  'ugro_view':     'ae727128',  /* View@2024  */
 };
 
 /* Simple hash for single-file use — combines userid+password with a salt */
@@ -653,7 +653,7 @@ function lgHash(u, p) {
   var hex = '';
   var n = Math.abs(h);
   for (var j = 0; j < 32; j++) {
-    hex += ((n ^ (j * 2654435761)) % 16).toString(16);
+    hex += Math.abs((n ^ (j * 2654435761)) % 16).toString(16);
     n = (n >>> 1) ^ (0xEDB88320 & -(n & 1));
   }
   return hex;
