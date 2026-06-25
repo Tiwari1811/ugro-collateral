@@ -593,7 +593,7 @@ var SK='ugro_v1';
 var TC={METRO:{l:'Metro',c:'tm',gi:0,lm:65,lr:55,cl:'#F47920',fv:.70},URBAN:{l:'Urban',c:'tu',gi:2,lm:65,lr:55,cl:'#2E6B9E',fv:.75},SEMI:{l:'Semi-Urban',c:'ts',gi:4,lm:70,lr:60,cl:'#C47A00',fv:.80},RURAL:{l:'Rural',c:'tr',gi:6,lm:75,lr:65,cl:'#0D7A4C',fv:.85}};
 var MP=['110','400','600','560','500','700','380','411','122','123'];
 var MS=['DELHI','MAHARASHTRA','TAMIL NADU','KARNATAKA','TELANGANA','GUJARAT'];
-var DB={},ready=false,MAP,MKR,CI=[],LAST={},RERA={},LF=null,GEO_CIRCLE=null,GEO_MARKERS=[],AREA_MAP={};
+var DB={},ready=false,MAP,MKR,CI=[],LAST={},RERA={},LF=null,GEO_CIRCLE=null,GEO_MARKERS=[],AREA_MAP={},LM={lat:null,lng:null,pin:null},XR={};
 
 function tr(s,p){if(MP.some(function(x){return p.indexOf(x)===0;}))return'METRO';if(MS.indexOf(s)>-1)return'URBAN';return'SEMI';}
 function sr2(s,a,b){var x=Math.sin(s*9301+49297)*233280;return a+(x-Math.floor(x))*(b-a);}
@@ -1699,7 +1699,11 @@ function lmSwitch(mode) {
   document.getElementById('lm-pin').style.color = isPinMode ? '#fff' : 'rgba(255,255,255,.55)';
   document.getElementById('lm-geo').style.background = isPinMode ? 'rgba(255,255,255,.07)' : 'var(--o)';
   document.getElementById('lm-geo').style.color = isPinMode ? 'rgba(255,255,255,.55)' : '#fff';
-  if (isPinMode) document.getElementById('lm-nearby').style.display = 'none';
+  if (isPinMode) {
+    document.getElementById('lm-nearby').style.display = 'none';
+    var fcEl2 = document.getElementById('fc');
+    if (fcEl2) fcEl2.style.display = 'none'; /* reset — will show when pincode searched */
+  }
 }
 
 /* GPS button in geo mode */
@@ -1771,6 +1775,9 @@ function lmFetch() {
 
   MAP.flyTo([lat, lng], lmZoomForRadius(rad), { duration: 1.2 });
   tn('Resolved to ' + best + ' — ' + (dist || state) + ' (~' + km + 'km centroid)');
+  /* Hide pincode card in geo mode — show only geo panel */
+  var fcEl = document.getElementById('fc');
+  if (fcEl) fcEl.style.display = 'none';
   lmNearby();
 }
 
@@ -2001,6 +2008,9 @@ function lmNearby() {
     ).addTo(MAP);
     GEO_MARKERS.push(marker);
   });
+  /* Scroll left panel so geo result is visible */
+  var nb = document.getElementById('lm-nearby');
+  if (nb) setTimeout(function(){ nb.scrollIntoView({behavior:'smooth',block:'nearest'}); }, 100);
 }
 
 window.onload = function(){ loadDB(); };
