@@ -1827,84 +1827,28 @@ function lmNearby() {
   var rad = parseFloat(document.getElementById('lm-rad2').value) || 5;
   document.getElementById('lm-nearby').style.display = 'block';
 
-  /* ── Gather all stored entries within radius ── */
+  /* ── Gather hits from team localStorage entries ── */
   var all = gAD(), hits = [];
   for (var pin in all) {
     var dbr = DB[pin];
     (all[pin] || []).forEach(function(e) {
       if (!e.marketRate || e.marketRate < 1) return;
-
-      var eLat = null, eLng = null, coordSrc = '';
-
-      /* Priority 1: exact GPS tag on the entry */
+      var eLat = null, eLng = null;
       if (e.geo && e.geo.lat && e.geo.lng) {
-        eLat = e.geo.lat; eLng = e.geo.lng; coordSrc = 'gps';
-
-      /* Priority 2: DB pin centroid — only if state matches */
+        eLat = e.geo.lat; eLng = e.geo.lng;
       } else if (dbr && dbr[2] && dbr[3]) {
-        var dbState  = (dbr[0]  || '').toUpperCase().substring(0,4);
-        var entState = (e.state || e.enteredBy && '' || '').toUpperCase().substring(0,4);
-        /* Always use pin centroid — state check optional, gives best available */
-        eLat = dbr[2]; eLng = dbr[3]; coordSrc = 'pin';
-
-      /* Priority 3: area/district name lookup in AREA_MAP */
+        eLat = dbr[2]; eLng = dbr[3];
       } else {
-        var areaKey = (e.area || '').toLowerCase().trim();
-        if (areaKey && AREA_MAP[areaKey]) {
-          eLat = AREA_MAP[areaKey][0]; eLng = AREA_MAP[areaKey][1]; coordSrc = 'area';
-        }
+        var ak = (e.area || '').toLowerCase().trim();
+        if (ak && AREA_MAP[ak]) { eLat = AREA_MAP[ak][0]; eLng = AREA_MAP[ak][1]; }
       }
-
       if (!eLat || !eLng) return;
       var dist = lmHav(LM.lat, LM.lng, eLat, eLng);
-      if (dist <= rad) hits.push({ e: e, pin: pin, dist: dist, gps: coordSrc === 'gps' });
+      if (dist <= rad) hits.push({ e: e, pin: pin, dist: dist, gps: !!(e.geo && e.geo.lat), eLat: eLat, eLng: eLng });
     });
   }
 
-  var wradEl=document.getElementById('lm-wrad');if(wradEl)wradEl.textContent=rad+'km';
-  document.getElementById('lm-near-sub').textContent =
-    hits.length + ' comparable' + (hits.length === 1 ? '' : 's') + ' within ' + rad + 'km';
-
-  /* ── No data ── */
-  if (!hits.length) {
-    ['lm-result-wrap'].forEach(function(id) { document.getElementById(id).style.display = 'none'; });
-    document.getElementById('lm-nodata').style.display = 'block';
-    document.getElementById('lm-nodata-r').textContent = rad;
-    document.getElementById('lm-wfmv').textContent = '—';
-    document.getElementById('lm-sfmv').textContent = '—';
-    document.getElementById('lm-wconf').textContent = '—';
-    return;
-  }
-  document.getElementById('lm-result-wrap').style.display = 'block';
-  document.getElementById('lm-nodata').style.display = 'none';
-
-
-  /* ── Also search embedded land rate dataset (GLD) ── */
-  if (GLD && GLD.length) {
-    for (var gi = 0; gi < GLD.length; gi++) {
-      var ge = GLD[gi];
-      var gd = lmHav(LM.lat, LM.lng, ge.a, ge.o);
-      if (gd > rad) continue;
-      hits.push({
-        pin: ge.p || ('GLD-'+gi),
-        dist: gd,
-        gps: true,  /* has exact coords */
-        eLat: ge.a,
-        eLng: ge.o,
-        e: {
-          marketRate: ge.r,
-          guidelineValue: null,
-          propertyType: 'Land',
-          source: ge.s || 'Dataset',
-          enteredBy: ge.l || ge.s || '—',
-          date: '',
-          area: ge.l || ''
-        }
-      });
-    }
-  }
-
-  /* Search embedded land rate dataset (GLD) */
+  /* ── Also search embedded GLD dataset ── */
   if (GLD && GLD.length) {
     for (var gi = 0; gi < GLD.length; gi++) {
       var ge = GLD[gi];
@@ -1928,30 +1872,49 @@ function lmNearby() {
       });
     }
   }
+
+  /* Update subtitle */
+  var wradEl = document.getElementById('lm-wrad'); if (wradEl) wradEl.textContent = rad + 'km';
+  document.getElementById('lm-near-sub').textContent =
+    hits.length + ' comparable' + (hits.length === 1 ? '' : 's') + ' within ' + rad + 'km';
+
+  /* ── No data at all ── */
+  if (!hits.length) {
+    document.getElementById('lm-result-wrap').style.display = 'none';
+    document.getElementById('lm-nodata').style.display = 'block';
+    document.getElementById('lm-nodata-r').textContent = rad;
+    document.getElementById('lm-wfmv').textContent = '—';
+    document.getElementById('lm-sfmv').textContent = '—';
+    document.getElementById('lm-wconf').textContent = '—';
+    return;
+  }
+
+  document.getElementById('lm-result-wrap').style.display = 'block';
+  document.getElementById('lm-nodata').style.display = 'none';
+
   hits.sort(function(a, b) { return a.dist - b.dist; });
-  var rates  = hits.map(function(h) { return h.e.marketRate; });
+  var rates   = hits.map(function(h) { return h.e.marketRate; });
   var gvRates = hits.map(function(h) { return h.e.guidelineValue || null; });
 
-  /* ── IDW p=2 ── */
+  /* ── IDW p=2 weighted FMV ── */
   var weights = hits.map(function(h) { return 1 / Math.max(h.dist, 0.01) / Math.max(h.dist, 0.01); });
   var wsum    = weights.reduce(function(s, w) { return s + w; }, 0);
   var wfmv    = Math.round(weights.reduce(function(s, w, i) { return s + w * rates[i]; }, 0) / wsum / 10) * 10;
   var sfmv    = Math.round(rates.reduce(function(s, v) { return s + v; }, 0) / rates.length / 10) * 10;
 
   /* Weighted GV */
-  var gvHits  = hits.filter(function(h, i) { return gvRates[i]; });
+  var gvHits = hits.filter(function(h) { return h.e.guidelineValue; });
   var wgv = null;
   if (gvHits.length) {
-    var gvW   = gvHits.map(function(h) { return 1 / Math.max(h.dist, 0.01) / Math.max(h.dist, 0.01); });
-    var gvWS  = gvW.reduce(function(s, w) { return s + w; }, 0);
-    wgv = Math.round(gvW.reduce(function(s, w, i) { return s + w * (gvHits[i].e.guidelineValue); }, 0) / gvWS / 10) * 10;
+    var gvW  = gvHits.map(function(h) { return 1 / Math.max(h.dist, 0.01) / Math.max(h.dist, 0.01); });
+    var gvWS = gvW.reduce(function(s, w) { return s + w; }, 0);
+    wgv = Math.round(gvW.reduce(function(s, w, i) { return s + w * gvHits[i].e.guidelineValue; }, 0) / gvWS / 10) * 10;
   }
 
-  var mn  = Math.min.apply(null, rates), mx = Math.max.apply(null, rates);
-  var sd  = rates.length > 1
-    ? Math.round(Math.sqrt(rates.reduce(function(s, v) { return s + Math.pow(v - wfmv, 2); }, 0) / rates.length))
-    : 0;
-  var cv  = wfmv > 0 ? Math.round(sd / wfmv * 100) : 0;
+  var mn   = Math.min.apply(null, rates), mx = Math.max.apply(null, rates);
+  var sd   = rates.length > 1
+    ? Math.round(Math.sqrt(rates.reduce(function(s, v) { return s + Math.pow(v - wfmv, 2); }, 0) / rates.length)) : 0;
+  var cv   = wfmv > 0 ? Math.round(sd / wfmv * 100) : 0;
   var conf = hits.length >= 5 && cv < 15 ? 'HIGH' : hits.length >= 3 || cv < 25 ? 'MEDIUM' : 'LOW';
   var confC = { HIGH: 'var(--g)', MEDIUM: 'var(--a)', LOW: 'var(--r)' }[conf];
 
@@ -1964,7 +1927,7 @@ function lmNearby() {
   var vsStr = vsPct === null ? '—' : (vsPct >= 0 ? '+' : '') + vsPct + '%';
   var vsCol = vsPct === null ? 'var(--mu)' : vsPct > 10 ? 'var(--g)' : vsPct < -10 ? 'var(--r)' : 'var(--a)';
 
-  /* ── Populate hero numbers ── */
+  /* ── Populate result panel ── */
   document.getElementById('lm-wfmv').textContent  = fmt(wfmv) + ' /sqft';
   document.getElementById('lm-winfo').textContent = 'IDW p=2 | ' + hits.length + ' comparables';
   document.getElementById('lm-sfmv').textContent  = fmt(sfmv) + ' /sqft';
@@ -1972,73 +1935,44 @@ function lmNearby() {
   document.getElementById('lm-wconf').textContent = conf;
   document.getElementById('lm-wconf').style.color = confC;
   document.getElementById('lm-wpts').textContent  = hits.length + ' data point' + (hits.length === 1 ? '' : 's');
-  document.getElementById('lm-wcol').textContent  = fmt(wcol);
+  document.getElementById('lm-wcol').textContent  = fmtCr(wcol);
   document.getElementById('lm-wcoln').textContent = 'At ' + tc.lr + '% of Geo-FMV';
-  document.getElementById('lm-wfsv').textContent  = fmt(wfsv);
+  document.getElementById('lm-wfsv').textContent  = fmtCr(wfsv);
   document.getElementById('lm-wfsvn').textContent = Math.round(tc.fv * 100) + '% of Geo-FMV';
   document.getElementById('lm-wvs').textContent   = vsStr;
   document.getElementById('lm-wvs').style.color   = vsCol;
   document.getElementById('lm-range').textContent  = fmt(mn) + ' – ' + fmt(mx);
   document.getElementById('lm-sd').textContent     = sd ? fmt(sd) : 'N/A';
   document.getElementById('lm-cv').textContent     = cv ? cv + '%' : 'N/A';
-  document.getElementById('lm-nearest').textContent= fmt(hits[0].e.marketRate) + ' @ ' + hits[0].dist.toFixed(2) + 'km';
+  document.getElementById('lm-nearest').textContent = fmt(hits[0].e.marketRate) + ' @ ' + hits[0].dist.toFixed(2) + 'km';
 
   /* ── Comparables table ── */
   document.getElementById('lm-nlist-wrap').style.display = 'block';
-  document.getElementById('lm-footer-rate').textContent = fmt(wfmv);
-  document.getElementById('lm-footer-gv').textContent   = wgv ? fmt(wgv) : '—';
+  document.getElementById('lm-footer-rate').textContent  = fmt(wfmv);
+  document.getElementById('lm-footer-gv').textContent    = wgv ? fmt(wgv) : '—';
 
   document.getElementById('lm-nlist').innerHTML = hits.map(function(h, i) {
     var w    = Math.round(weights[i] / wsum * 100);
-    var wPx  = Math.max(w, 2);
     var barC = w > 30 ? 'var(--g)' : w > 15 ? 'var(--o)' : 'var(--n4)';
-    var gvTxt= h.e.guidelineValue ? fmt(h.e.guidelineValue) : '—';
-    var prem = h.e.guidelineValue ? '+' + Math.round((h.e.marketRate / h.e.guidelineValue - 1) * 100) + '%' : '—';
-    var bgRow= i % 2 === 0 ? 'var(--w)' : 'var(--s)';
-    return '<div style="display:grid;grid-template-columns:52px 1fr 68px 68px 58px 52px;align-items:center;padding:7px 12px;border-bottom:1px solid var(--b);background:'+bgRow+'">'
-
-      /* Pin */
+    var gvTxt = h.e.guidelineValue ? fmt(h.e.guidelineValue) : '—';
+    var prem  = h.e.guidelineValue ? '+' + Math.round((h.e.marketRate / h.e.guidelineValue - 1) * 100) + '%' : '—';
+    var bgRow = i % 2 === 0 ? 'var(--w)' : 'var(--s)';
+    return '<div style="display:grid;grid-template-columns:52px 1fr 68px 68px 58px 52px;align-items:center;padding:7px 12px;border-bottom:1px solid var(--b);background:' + bgRow + '">'
       + '<div>'
-      + '<div style="font-family:monospace;font-size:.66rem;font-weight:700;color:var(--o)">' + h.pin + '</div>'
+      + '<div style="font-family:monospace;font-size:.65rem;font-weight:700;color:var(--o)">' + h.pin + '</div>'
       + (h.gps
-          ? '<div style="font-size:.5rem;background:var(--gb);color:var(--g);padding:0 4px;border-radius:2px;display:inline-block;margin-top:1px">GPS</div>'
-          : '<div style="font-size:.5rem;background:var(--np);color:var(--n4);padding:0 4px;border-radius:2px;display:inline-block;margin-top:1px">Pin</div>')
+        ? '<div style="font-size:.48rem;background:var(--gb);color:var(--g);padding:0 4px;border-radius:2px;display:inline-block">GPS</div>'
+        : '<div style="font-size:.48rem;background:var(--np);color:var(--n4);padding:0 4px;border-radius:2px;display:inline-block">Pin</div>')
       + '</div>'
-
-      /* Location / type / source + weight bar */
       + '<div style="min-width:0;padding-right:6px">'
-      + '<div style="font-size:.64rem;color:var(--n);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
-      + (h.e.propertyType || '—') + '</div>'
-      + '<div style="font-size:.57rem;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
-      + (h.e.enteredBy || '') + (h.e.date ? '  ·  ' + h.e.date : '') + '</div>'
-      + '<div style="height:3px;background:var(--s2);border-radius:2px;overflow:hidden;margin-top:3px">'
-      + '<div style="height:100%;width:'+wPx+'%;background:'+barC+';border-radius:2px"></div>'
+      + '<div style="font-size:.62rem;color:var(--n);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (h.e.propertyType || '—') + '</div>'
+      + '<div style="font-size:.55rem;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (h.e.enteredBy || '') + (h.e.date ? ' · ' + h.e.date : '') + '</div>'
+      + '<div style="height:3px;background:var(--s2);border-radius:2px;margin-top:3px"><div style="height:100%;width:' + Math.max(w,2) + '%;background:' + barC + ';border-radius:2px"></div></div>'
       + '</div>'
-      + '</div>'
-
-      /* Market Rate */
-      + '<div style="text-align:right">'
-      + '<div style="font-size:.72rem;font-weight:800;color:var(--n)">' + fmt(h.e.marketRate) + '</div>'
-      + '<div style="font-size:.52rem;color:var(--mu)">' + fsm(h.e.marketRate) + '</div>'
-      + '</div>'
-
-      /* GV */
-      + '<div style="text-align:right">'
-      + '<div style="font-size:.68rem;font-weight:600;color:var(--g)">' + gvTxt + '</div>'
-      + '<div style="font-size:.52rem;color:var(--mu)">' + prem + '</div>'
-      + '</div>'
-
-      /* Distance */
-      + '<div style="text-align:right">'
-      + '<div style="font-size:.68rem;font-weight:700;color:var(--n)">' + h.dist.toFixed(2) + 'km</div>'
-      + '<div style="font-size:.52rem;color:var(--mu)">' + h.e.source + '</div>'
-      + '</div>'
-
-      /* Weight */
-      + '<div style="text-align:right">'
-      + '<div style="font-size:.72rem;font-weight:800;color:' + barC + '">' + w + '%</div>'
-      + '</div>'
-
+      + '<div style="text-align:right"><div style="font-size:.7rem;font-weight:800;color:var(--n)">' + fmt(h.e.marketRate) + '</div><div style="font-size:.5rem;color:var(--mu)">' + fsm(h.e.marketRate) + '</div></div>'
+      + '<div style="text-align:right"><div style="font-size:.66rem;color:var(--g)">' + gvTxt + '</div><div style="font-size:.5rem;color:var(--mu)">' + prem + '</div></div>'
+      + '<div style="text-align:right"><div style="font-size:.66rem;font-weight:700;color:var(--n)">' + h.dist.toFixed(2) + 'km</div></div>'
+      + '<div style="text-align:right"><div style="font-size:.7rem;font-weight:800;color:' + barC + '">' + w + '%</div></div>'
       + '</div>';
   }).join('');
 
@@ -2046,37 +1980,28 @@ function lmNearby() {
   lmClearMarkers();
   hits.forEach(function(h, i) {
     var w     = Math.round(weights[i] / wsum * 100);
-    var r     = Math.max(6, Math.min(16, 6 + w / 8));
+    var r2    = Math.max(5, Math.min(14, 5 + w / 7));
     var color = w > 30 ? '#0D7A4C' : w > 15 ? '#F47920' : '#2E6B9E';
-    /* Same coord resolution as the loop above */
-    var eLat = null, eLng = null;
-    if (h.e.geo && h.e.geo.lat) { eLat = h.e.geo.lat; eLng = h.e.geo.lng; }
-    else if (DB[h.pin] && DB[h.pin][2]) { eLat = DB[h.pin][2]; eLng = DB[h.pin][3]; }
-    else { var ak=(h.e.area||'').toLowerCase().trim(); if(ak&&AREA_MAP[ak]){eLat=AREA_MAP[ak][0];eLng=AREA_MAP[ak][1];} }
+    /* Use pre-resolved coordinates */
+    var eLat = h.eLat, eLng = h.eLng;
+    if (!eLat || !eLng) {
+      if (DB[h.pin] && DB[h.pin][2]) { eLat = DB[h.pin][2]; eLng = DB[h.pin][3]; }
+    }
     if (!eLat || !eLng) return;
     var marker = L.circleMarker([eLat, eLng], {
-      radius: r,
-      color: '#fff',
-      weight: 1.5,
-      fillColor: color,
-      fillOpacity: 0.85
+      radius: r2, color: '#fff', weight: 1.5, fillColor: color, fillOpacity: 0.85
     }).bindPopup(
-      '<div style="font-size:12px;min-width:140px">'
+      '<div style="font-size:12px;min-width:130px">'
       + '<b style="color:#F47920">' + h.pin + '</b>'
       + (h.gps ? ' <span style="font-size:10px;background:#E8F5EE;color:#0D7A4C;padding:1px 4px;border-radius:2px">GPS</span>' : '')
-      + '<br><b>' + fmt(h.e.marketRate) + ' /sqft</b>'
-      + (h.e.guidelineValue ? '<br>GV: ' + fmt(h.e.guidelineValue) : '')
-      + '<br>' + h.e.propertyType + ' — ' + h.dist.toFixed(2) + 'km away'
+      + '<br><b>' + fmt(h.e.marketRate) + '/sqft</b>'
+      + '<br>' + h.e.propertyType + ' · ' + h.dist.toFixed(2) + 'km'
       + '<br><span style="color:#F47920;font-weight:700">Weight: ' + w + '%</span>'
-      + '<br><span style="color:#64748B;font-size:11px">' + h.e.enteredBy + ' · ' + h.e.date + '</span>'
       + '</div>'
     ).addTo(MAP);
     GEO_MARKERS.push(marker);
   });
 }
-
-
-
 
 window.onload = function(){ loadDB(); };
 </script>
