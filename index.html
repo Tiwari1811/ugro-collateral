@@ -1904,7 +1904,7 @@ function rpt(){
     '.terms p{margin-bottom:6px}',
     '.sign{text-align:right;margin-top:20px;font-size:11px;font-weight:700}',
     '.ref-lbl{font-size:10px;color:#555;margin-top:4px}',
-    '@media print{.np{display:none!important}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}#rpt-map-container{height:260px!important}}'
+    '@media print{.np{display:none!important}html,body{height:auto!important;overflow:visible!important}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}#rpt-map-container{height:220px!important;page-break-inside:avoid}table{page-break-inside:avoid}.hdr{page-break-after:avoid}.terms{page-break-inside:avoid}}'
   ].join('');
 
   var bod=[];
@@ -1912,7 +1912,7 @@ function rpt(){
 
   /* Action bar */
   bod.push('<div class="np">');
-  bod.push('<button onclick="window.print()" style="padding:6px 14px;background:#F47920;color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer">&#128438; Print / Save as PDF</button>');
+  bod.push('<button onclick="window._rptPrint()" style="padding:6px 14px;background:#F47920;color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer">&#128438; Print / Save as PDF</button>');
   bod.push('<button id="r-close" style="padding:6px 14px;background:#333;color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;margin-left:5px">&#10005; Close</button>');
   bod.push('<span style="font-size:10px;color:#666;margin-left:10px">Use browser Print → Save as PDF</span>');
   bod.push('</div>');
@@ -2025,12 +2025,18 @@ function rpt(){
   window._rptPrint = function(){
     var pw = window.open('', '_blank');
     if(!pw){ tn('Allow popups for this site to print DVR'); return; }
+    /* Write the full self-contained report doc into the new window */
+    pw.document.open();
     pw.document.write(window._rptDoc);
     pw.document.close();
-    /* Auto-print after map tiles load */
-    pw.addEventListener('load', function(){
-      setTimeout(function(){ pw.focus(); pw.print(); }, 1200);
-    });
+    /* Trigger print after content + map tiles have loaded */
+    pw.onload = function(){
+      setTimeout(function(){ pw.focus(); pw.print(); }, 1500);
+    };
+    /* Fallback in case onload already fired */
+    setTimeout(function(){
+      if(pw && !pw.closed){ pw.focus(); pw.print(); }
+    }, 3000);
   };
 
   /* Inject interactive Leaflet map into report after DOM is set */
