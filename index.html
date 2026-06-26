@@ -935,31 +935,30 @@ function demo(){
     {name:'Indore',lat:22.719,lng:75.857,z:'Semi-Urban',r:3800},
     {name:'Bhopal',lat:23.259,lng:77.413,z:'Semi-Urban',r:3200},
   ];
-  var clr={Metro:'#F47920',Urban:'#2E6B9E','Semi-Urban':'#0D7A4C',Rural:'#C47A00'};
   cities.forEach(function(c){
-    var col=clr[c.z]||'#888';
-    var sz=c.z==='Metro'?14:c.z==='Urban'?11:9;
+    var col='#F47920';
+    var sz=12;
     var ic=L.divIcon({className:'',
       html:'<div style="width:'+sz*2+'px;height:'+sz*2+'px;background:'+col+';border:2px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center">'
           +'<span style="font-size:'+(sz-2)+'px;color:#fff;font-weight:700">&#8226;</span></div>',
       iconSize:[sz*2,sz*2],iconAnchor:[sz,sz]});
     L.marker([c.lat,c.lng],{icon:ic})
-      .bindPopup('<b style="color:'+col+'">'+c.name+'</b><br>'
-        +'Zone: <b>'+c.z+'</b><br>'
+      .bindPopup('<b style="color:#F47920">'+c.name+'</b><br>'
+        +'<span style="font-size:11px;background:#FEF3E7;color:#F47920;padding:1px 6px;border-radius:3px;font-weight:700">UGRO Funded Properties</span><br>'
         +'Model FMV: <b>&#8377;'+c.r.toLocaleString('en-IN')+'/sqft</b><br>'
-        +'<span style="font-size:11px;color:#64748B">Tap a pin below to look up live rates</span>')
+        +'<span style="font-size:11px;color:#64748B">Tap a pin to look up live rates</span>')
       .addTo(MAP);
   });
   /* Legend */
   var legend=L.control({position:'topright'});
   legend.onAdd=function(){
     var d=L.DomUtil.create('div');
-    d.style.cssText='background:rgba(255,255,255,.92);backdrop-filter:blur(6px);padding:8px 11px;border-radius:7px;font-size:.6rem;line-height:1.7;box-shadow:0 2px 8px rgba(0,0,0,.12)';
-    d.innerHTML='<div style="font-weight:700;color:#0A2D45;margin-bottom:3px;font-size:.62rem">UGRO Coverage</div>'
-      +'<div><span style="color:#F47920">&#9679;</span> Metro</div>'
-      +'<div><span style="color:#2E6B9E">&#9679;</span> Urban</div>'
-      +'<div><span style="color:#0D7A4C">&#9679;</span> Semi-Urban</div>'
-      +'<div style="margin-top:4px;color:#64748B;font-size:.55rem">Enter pincode or coordinates<br>in left panel to get live FMV</div>';
+    d.style.cssText='background:rgba(244,121,32,.92);backdrop-filter:blur(6px);padding:7px 12px;border-radius:7px;font-size:.6rem;line-height:1.6;box-shadow:0 2px 8px rgba(0,0,0,.2)';
+    d.innerHTML='<div style="display:flex;align-items:center;gap:6px">'
+      +'<span style="color:#fff;font-size:1rem">&#9679;</span>'
+      +'<span style="font-weight:700;color:#fff;font-size:.62rem">UGRO Funded Properties</span>'
+      +'</div>'
+      +'<div style="margin-top:3px;color:rgba(255,255,255,.8);font-size:.52rem">Enter pincode or coordinates<br>in left panel to get live FMV</div>';
     return d;
   };
   legend.addTo(MAP);
@@ -1527,7 +1526,7 @@ function dvRun() {
       }
       if (!eLat) return;
       var dist2 = lmHav(lat, lng, eLat, eLng);
-      if (dist2 <= rad) hits.push({ e:entry, pin:pin, dist:dist2, gps:!!(entry.geo&&entry.geo.lat) });
+      if (dist2 <= rad) hits.push({ e:entry, pin:pin, dist:dist2, gps:!!(entry.geo&&entry.geo.lat), eLat:eLat, eLng:eLng });
     });
   }
 
@@ -1678,19 +1677,21 @@ function dvRun() {
   lmClearMarkers();
   hits.forEach(function(h,i){
     var w = Math.round(weights[i]/wsum*100);
-    var r = Math.max(6, Math.min(16, 6+w/8));
-    var color = w>30?'#0D7A4C':w>15?'#F47920':'#2E6B9E';
-    var eLat=(h.e.geo&&h.e.geo.lat)?h.e.geo.lat:(DB[h.pin]?DB[h.pin][2]:null);
-    var eLng=(h.e.geo&&h.e.geo.lng)?h.e.geo.lng:(DB[h.pin]?DB[h.pin][3]:null);
-    if(!eLat) { var ak=(h.e.area||'').toLowerCase().trim(); if(ak&&AREA_MAP[ak]){eLat=AREA_MAP[ak][0];eLng=AREA_MAP[ak][1];} }
+    var r = Math.max(7, Math.min(16, 7+w/7));
+    /* Resolve coords: GPS on entry > GPS on hit (GLD) > DB centroid > area name */
+    var eLat = (h.e.geo&&h.e.geo.lat) ? h.e.geo.lat
+             : (h.geo&&h.geo.lat)     ? h.geo.lat
+             : (DB[h.pin]&&DB[h.pin][2]) ? DB[h.pin][2] : null;
+    var eLng = (h.e.geo&&h.e.geo.lng) ? h.e.geo.lng
+             : (h.geo&&h.geo.lng)     ? h.geo.lng
+             : (DB[h.pin]&&DB[h.pin][3]) ? DB[h.pin][3] : null;
+    if(!eLat||!eLng) { var ak=(h.e.area||'').toLowerCase().trim(); if(ak&&AREA_MAP[ak]){eLat=AREA_MAP[ak][0];eLng=AREA_MAP[ak][1];} }
     if(!eLat||!eLng) return;
-    L.circleMarker([eLat,eLng],{radius:r,color:'#fff',weight:1.5,fillColor:color,fillOpacity:.85})
-     .bindPopup('<b style="color:#F47920">'+h.pin+'</b>'+(h.gps?' <span style="font-size:10px;background:#E8F5EE;color:#0D7A4C;padding:1px 4px;border-radius:2px">GPS</span>':'')
-       +'<br><b>'+fmt(h.e.marketRate)+'/sqft</b>'+(h.e.guidelineValue?'<br>GV: '+fmt(h.e.guidelineValue):'')
-       +'<br>'+h.e.propertyType+' · '+h.dist.toFixed(2)+'km'
-       +'<br><span style="color:#F47920;font-weight:700">Weight: '+w+'%</span>')
-     .addTo(MAP);
-    GEO_MARKERS.push(L.circleMarker([eLat,eLng],{radius:r,color:'#fff',weight:1.5,fillColor:color,fillOpacity:.85}).addTo(MAP));
+    var isGld = h.ugro || (h.e.source&&h.e.source.indexOf('UGRO')===0);
+    var mkr = L.circleMarker([eLat,eLng],{radius:r,color:'#fff',weight:1.5,fillColor:'#F47920',fillOpacity:.88})
+      .bindPopup('<div style="font-size:12px;min-width:130px">'        +'<b style="color:#F47920">'+h.pin+'</b>'        +(isGld?' <span style="font-size:10px;background:#FEF3E7;color:#F47920;padding:1px 4px;border-radius:2px;font-weight:700">UGRO</span>':h.gps?' <span style="font-size:10px;background:#E8F5EE;color:#0D7A4C;padding:1px 4px;border-radius:2px">GPS</span>':'')        +'<br><b>'+fmt(h.e.marketRate)+'/sqft</b>'        +(h.e.guidelineValue?'<br>GV: '+fmt(h.e.guidelineValue):'')        +'<br>'+(h.e.propertyType||'Land')+' · '+h.dist.toFixed(2)+'km'        +'<br><span style="color:#F47920;font-weight:700">Weight: '+w+'%</span>'        +'</div>')
+      .addTo(MAP);
+    GEO_MARKERS.push(mkr);
   });
   MAP.flyTo([lat,lng], lmZoomForRadius(rad), {duration:1.2});
 
@@ -1794,12 +1795,37 @@ function rpt(){
   var today=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
   var todayFull=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
   var varPct=sd&&mv?Math.min(Math.round(sd/mv*100),25):5;
-  var locStr=lat&&lng?lat.toFixed(7)+','+lng.toFixed(7):'—';
-  var addrStr=dist?(dist+', '+state+' '+pin+', India'):(state+' '+pin+', India');
+  var locStr=lat&&lng?lat.toFixed(7)+'°N, '+lng.toFixed(7)+'°E':'—';
+  var addrStr=dist?(dist+', '+state+' — '+pin+', India'):(state+' — '+pin+', India');
   var loStr=dist||state||pin;
   var minR=mn<mv?mn:mv, maxR=mx>mv?mx:mv;
   var ballpark='The price ranges between "Rs.'+Math.round(minR/100)*100+' to Rs.'+Math.round(maxR/100)*100+' Per Square Feet"';
 
+  /* Fetch micro-area via Nominatim reverse geocode, then build report */
+  function _buildRpt(microArea){
+    var fullAddr='';
+    if(microArea) fullAddr=microArea+', ';
+    fullAddr+=(dist?dist+', ':'')+state+' — '+pin+', India';
+    _renderRpt(fullAddr);
+  }
+
+  if(lat&&lng){
+    fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lng+'&format=json&zoom=16&addressdetails=1')
+      .then(function(r){return r.json();})
+      .then(function(d){
+        var a=d.address||{};
+        var micro=a.road||a.neighbourhood||a.suburb||a.village||a.hamlet||a.quarter||a.town||a.city_district||'';
+        var locality=a.suburb||a.neighbourhood||a.village||a.city_district||a.county||dist||'';
+        if(locality&&micro&&locality!==micro) micro=micro+', '+locality;
+        else if(!micro) micro=locality;
+        _buildRpt(micro);
+      })
+      .catch(function(){ _buildRpt(''); });
+  } else {
+    _buildRpt('');
+  }
+
+  function _renderRpt(addrStr){
   /* Reference table rows from hits */
   var refRows='';
   if(hits.length){
@@ -1926,7 +1952,31 @@ function rpt(){
 
   bod.push('</div>');
 
-  var doc='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>DVR-'+pin+'</title><style>'+css+'</style></head><body>'+bod.join('')+'</body></html>';
+  /* Add Leaflet + map init script directly into the printable doc */
+  var mapInitJs='';
+  if(lat&&lng){
+    var compPts=(_rptHits&&_rptHits.length)?_rptHits.slice(0,20).map(function(h){
+      var eLat=h.geo?h.geo.lat:(h.e&&h.e.geo?h.e.geo.lat:null);
+      var eLng=h.geo?h.geo.lng:(h.e&&h.e.geo?h.e.geo.lng:null);
+      if(!eLat||!eLng)return null;
+      return '{lat:'+eLat+',lng:'+eLng+',r:'+Math.round(h.e.marketRate)+'}';
+    }).filter(Boolean):[];
+    mapInitJs='<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">'
+      +'<scr'+'ipt src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></scr'+'ipt>'
+      +'<scr'+'ipt>'
+      +'window.addEventListener("load",function(){'
+        +'var mc=document.getElementById("rpt-map-container");if(!mc)return;'
+        +'var m=L.map(mc,{zoomControl:false,attributionControl:false}).setView(['+lat+','+lng+'],13);'
+        +'L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(m);'
+        +'var si=L.divIcon({className:"",html:"<div style=\"width:13px;height:13px;background:#C0392B;border:2px solid #fff;border-radius:50%;box-shadow:0 0 5px rgba(192,57,43,.8)\"></div>",iconSize:[13,13],iconAnchor:[6,6]});'
+        +'L.marker(['+lat+','+lng+'],{icon:si}).addTo(m).bindPopup("Subject Property").openPopup();'
+        +'L.circle(['+lat+','+lng+'],{radius:'+rad*1000+',color:"#2E6B9E",weight:1.5,dashArray:"5,4",fillOpacity:0.05}).addTo(m);'
+        +(compPts.length?'['+compPts.join(',')+'].forEach(function(p){var ic=L.divIcon({className:"",html:"<div style=\"background:#F47920;border:2px solid #fff;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:800;color:#fff;white-space:nowrap\">\u20b9"+Math.round(p.r/1000)+"k</div>",iconSize:[1,1],iconAnchor:[0,8]});L.marker([p.lat,p.lng],{icon:ic}).addTo(m);});':'')
+        +'setTimeout(function(){m.invalidateSize();},300);'
+      +'});'
+      +'</scr'+'ipt>';
+  }
+  var doc='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>DVR-'+pin+'</title>'+mapInitJs+'<style>'+css+'</style></head><body>'+bod.join('')+'</body></html>';
   /* Inject logo */
   doc=doc.replace('UGRO_LOGO_PLACEHOLDER', LOGO_VAL);
 
@@ -1940,6 +1990,18 @@ function rpt(){
   modal.innerHTML=doc;
   var cb=modal.querySelector('#r-close');
   if(cb) cb.onclick=function(){var m=document.getElementById('dvr-modal');if(m)m.remove();};
+  /* Store doc for print — used by _rptPrint called from the action bar button */
+  window._rptDoc = doc;
+  window._rptPrint = function(){
+    var pw = window.open('', '_blank');
+    if(!pw){ tn('Allow popups for this site to print DVR'); return; }
+    pw.document.write(window._rptDoc);
+    pw.document.close();
+    /* Auto-print after map tiles load */
+    pw.addEventListener('load', function(){
+      setTimeout(function(){ pw.focus(); pw.print(); }, 1200);
+    });
+  };
 
   /* Inject interactive Leaflet map into report after DOM is set */
   if(_rptLat&&_rptLng){
@@ -1992,7 +2054,8 @@ function rpt(){
       setTimeout(function(){rmap.invalidateSize();},150);
     },200);
   }
-}
+  } // end _renderRpt
+} // end rpt
 
 function sw(n){
   [1,2,3].forEach(function(i){
@@ -2562,12 +2625,15 @@ function lmNearby() {
   hits.forEach(function(h, i) {
     var w     = Math.round(weights[i] / wsum * 100);
     var r2    = Math.max(5, Math.min(14, 5 + w / 7));
-    var color = w > 30 ? '#0D7A4C' : w > 15 ? '#F47920' : '#2E6B9E';
-    /* Use pre-resolved coordinates */
+    var color = '#F47920';
+    /* Use pre-resolved coordinates — also check h.geo for GLD/UGRO entries */
     var eLat = h.eLat, eLng = h.eLng;
     if (!eLat || !eLng) {
-      if (DB[h.pin] && DB[h.pin][2]) { eLat = DB[h.pin][2]; eLng = DB[h.pin][3]; }
+      if (h.geo && h.geo.lat) { eLat = h.geo.lat; eLng = h.geo.lng; }
+      else if (h.e && h.e.geo && h.e.geo.lat) { eLat = h.e.geo.lat; eLng = h.e.geo.lng; }
+      else if (DB[h.pin] && DB[h.pin][2]) { eLat = DB[h.pin][2]; eLng = DB[h.pin][3]; }
     }
+    if (!eLat || !eLng) { var ak2=(h.e&&h.e.area?h.e.area:'').toLowerCase().trim(); if(ak2&&AREA_MAP[ak2]){eLat=AREA_MAP[ak2][0];eLng=AREA_MAP[ak2][1];} }
     if (!eLat || !eLng) return;
     var marker = L.circleMarker([eLat, eLng], {
       radius: r2, color: '#fff', weight: 1.5, fillColor: color, fillOpacity: 0.85
