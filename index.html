@@ -370,12 +370,7 @@ img#lg{height:38px;width:auto;object-fit:contain;display:block}
               <div class="rvv" id="fgv">—</div>
               <div class="rvs" id="fgs">—</div>
             </div>
-            <div class="rvd"></div>
-            <div class="rvc">
-              <div class="rvl g">● Guideline Value</div>
-              <div class="rvv" id="fge" style="color:var(--g)">—</div>
-              <div class="rvs" id="fen">—</div>
-            </div>
+
           </div>
           <div class="fst">
             <div class="fsi"><div class="fsl">Confidence</div><div class="fsv" id="fcf">—</div></div>
@@ -438,13 +433,13 @@ img#lg{height:38px;width:auto;object-fit:contain;display:block}
             <div id="lm-nlist-wrap" style="display:none">
               <div style="padding:5px 12px;background:var(--n);font-size:.52rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4);border-top:1px solid rgba(255,255,255,.07)">Comparable Rates Used</div>
               <div style="display:grid;grid-template-columns:52px 1fr 68px 68px 58px 52px;padding:4px 12px;background:var(--n);font-size:.47rem;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.06em">
-                <div>Pin</div><div>Type / Source</div><div style="text-align:right">Rate</div><div style="text-align:right">GV</div><div style="text-align:right">Dist</div><div style="text-align:right">Wt%</div>
+                <div>Pin</div><div>Type / Source</div><div style="text-align:right">Rate</div><div style="text-align:right">Dist</div><div style="text-align:right">Wt%</div>
               </div>
               <div id="lm-nlist" style="max-height:180px;overflow-y:auto"></div>
               <div style="display:grid;grid-template-columns:52px 1fr 68px 68px 58px 52px;padding:7px 12px;background:var(--n);border-top:2px solid var(--o)">
                 <div style="font-size:.54rem;font-weight:700;color:var(--o);grid-column:1/3">⊘ Weighted Avg</div>
                 <div id="lm-footer-rate" style="font-size:.62rem;font-weight:800;color:var(--o);text-align:right">—</div>
-                <div id="lm-footer-gv" style="font-size:.62rem;color:var(--ml);text-align:right">—</div>
+  
                 <div style="font-size:.5rem;color:rgba(255,255,255,.35);text-align:right">IDW</div>
                 <div style="font-size:.5rem;color:rgba(255,255,255,.35);text-align:right">100%</div>
               </div>
@@ -453,7 +448,7 @@ img#lg{height:38px;width:auto;object-fit:contain;display:block}
         </div>
 
         <div style="flex:1"></div>
-        <div class="fn"><b>Note:</b> Pincode FMV from model (RERA + GV data). Lat/Long FMV from IDW-weighted team entries. For UGRO internal use only.</div>
+        <div class="fn"><b>Note:</b> FMV from IDW-weighted team entries. For UGRO internal use only.</div>
       </div>
 
       <!-- ══ TAB 2 — ENTER RATES ══ -->
@@ -565,13 +560,7 @@ img#lg{height:38px;width:auto;object-fit:contain;display:block}
               <div class="rvs" id="dv-fvs">IDW p=2</div>
               <div style="font-size:.5rem;color:rgba(255,255,255,.3)" id="dv-fve">—</div>
             </div>
-            <div class="rvd"></div>
-            <div class="rvc">
-              <div class="rvl g">● Guideline Value</div>
-              <div class="rvv" id="fgv2" style="color:var(--g)">—</div>
-              <div class="rvs" id="fgs2">—</div>
-              <div style="font-size:.5rem;color:rgba(255,255,255,.3)" id="dv-fge">—</div>
-            </div>
+
           </div>
           <div class="fst">
             <div class="fsi"><div class="fsl">Confidence</div><div class="fsv" id="fcf2">—</div></div>
@@ -586,37 +575,32 @@ img#lg{height:38px;width:auto;object-fit:contain;display:block}
               <div style="font-size:.5rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.38)">Desktop Value</div>
               <div style="font-size:.6rem;color:rgba(255,255,255,.6)" id="dv-basis">— sq ft</div>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1px 1fr;background:var(--b)">
+            <div style="display:grid;grid-template-columns:1fr;background:var(--b)">
               <div style="background:var(--op);padding:10px 12px">
                 <div style="font-size:.49rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--o);margin-bottom:2px">● Total Mkt Value</div>
                 <div style="font-size:1.15rem;font-weight:800;color:var(--o);line-height:1" id="dv-tmv">—</div>
                 <div style="font-size:.53rem;color:var(--mu);margin-top:2px" id="dv-tmv-rate">—</div>
               </div>
-              <div style="background:var(--b)"></div>
-              <div style="background:var(--gb);padding:10px 12px">
-                <div style="font-size:.49rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--g);margin-bottom:2px">● Total GV</div>
-                <div style="font-size:1.15rem;font-weight:800;color:var(--g);line-height:1" id="dv-tgv">—</div>
-                <div style="font-size:.53rem;color:var(--mu);margin-top:2px" id="dv-tgv-rate">—</div>
-              </div>
+
             </div>
             <div class="mr">
               <div class="mc"><div class="mcl">Max Loan (FMV)</div><div class="mcv" id="dv-loan">—</div><div class="mcn" id="dv-loan-n">—</div></div>
               <div class="mc"><div class="mcl">Forced Sale Value</div><div class="mcv" id="dv-fsv">—</div><div class="mcn" id="dv-fsv-n">—</div></div>
-              <div class="mc"><div class="mcl">Max Loan (GV)</div><div class="mcv" id="dv-lgv">—</div><div class="mcn" id="dv-lgv-n">—</div></div>
+
             </div>
           </div>
 
           <!-- Comparables -->
           <div id="dv-comps" style="display:none;border-top:1px solid var(--b)">
             <div style="padding:5px 12px;background:var(--n);font-size:.52rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4)">Comparable Rates Used</div>
-            <div style="display:grid;grid-template-columns:52px 1fr 72px 72px 54px 48px;padding:4px 12px;background:var(--n);font-size:.47rem;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.06em">
-              <div>Pin</div><div>Type / Source</div><div style="text-align:right">Rate</div><div style="text-align:right">GV</div><div style="text-align:right">Dist</div><div style="text-align:right">Wt%</div>
+            <div style="display:grid;grid-template-columns:52px 1fr 72px 54px 48px;padding:4px 12px;background:var(--n);font-size:.47rem;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.06em">
+              <div>Pin</div><div>Type / Source</div><div style="text-align:right">Rate</div><div style="text-align:right">Dist</div><div style="text-align:right">Wt%</div>
             </div>
             <div id="dv-comp-list" style="max-height:160px;overflow-y:auto"></div>
-            <div style="display:grid;grid-template-columns:52px 1fr 72px 72px 54px 48px;padding:7px 12px;background:var(--n);border-top:2px solid var(--o)">
+            <div style="display:grid;grid-template-columns:52px 1fr 72px 54px 48px;padding:7px 12px;background:var(--n);border-top:2px solid var(--o)">
               <div style="font-size:.54rem;font-weight:700;color:var(--o);grid-column:1/3">⊘ Weighted Avg</div>
               <div id="dv-footer-rate" style="font-size:.62rem;font-weight:800;color:var(--o);text-align:right">—</div>
-              <div id="dv-footer-gv" style="font-size:.62rem;color:var(--ml);text-align:right">—</div>
+
               <div style="font-size:.5rem;color:rgba(255,255,255,.35);text-align:right">IDW</div>
               <div style="font-size:.5rem;color:rgba(255,255,255,.35);text-align:right">100%</div>
             </div>
@@ -1179,7 +1163,7 @@ function rndr(pin,state,dist,t,p){
   /* FMV / GV */
   el=document.getElementById('fgv'); if(el) el.textContent=fmt(p.mv)+'/sqft';
   el=document.getElementById('fgs'); if(el) el.textContent='≈ '+fsm(p.mv)+'  ·  Model estimate';
-  el=document.getElementById('fge'); if(el) el.textContent=fmt(p.gv)+'/sqft';
+  el=document.getElementById('fge'); if(el) el.textContent='';
   var gvPct=p.mv>0?Math.round((p.mv/p.gv-1)*100):0;
   el=document.getElementById('fen'); if(el) el.textContent='GV · '+gvPct+'% market premium';
 
@@ -1213,7 +1197,7 @@ function uMap(lat,lon,pin,state,dist,t,p){
   if(MKR)MAP.removeLayer(MKR);
   var c=TC[t].cl;
   var ic=L.divIcon({className:'',html:'<div style="width:13px;height:13px;background:'+c+';border:2.5px solid #fff;border-radius:50%;box-shadow:0 2px 7px rgba(0,0,0,.3)"></div>',iconSize:[13,13],iconAnchor:[6,6]});
-  MKR=L.marker([lat,lon],{icon:ic}).bindPopup('<b style="color:#F47920">'+pin+'</b><br>'+(dist?dist+', ':'')+state+'<br>Mkt: '+fmt(p.mv)+'/sqft<br>GV: '+fmt(p.gv)+'/sqft').addTo(MAP);
+  MKR=L.marker([lat,lon],{icon:ic}).bindPopup('<b style="color:#F47920">'+pin+'</b><br>'+(dist?dist+', ':'')+state+'<br>FMV: '+fmt(p.mv)+'/sqft').addTo(MAP);
   MAP.flyTo([lat,lon],Math.max(MAP.getZoom(),11),{duration:1.2});
   MKR.openPopup();
 }
@@ -1460,7 +1444,7 @@ function dvPlotGps() {
       .bindPopup(
         '<b>' + h.pin + '</b> · ' + (h.type||'Land') + '<br>' +
         '<span style="color:#0D7A4C;font-weight:700">FMV: ₹' + Math.round(h.rate).toLocaleString('en-IN') + '/sqft</span>' +
-        (h.gv ? '<br><span style="color:#2E6B9E">GV: ₹' + Math.round(h.gv).toLocaleString('en-IN') + '/sqft</span>' : '') +
+
         '<br><span style="font-size:10px;color:#666">~' + h.dist + ' km away</span>'
       );
     window._dvPlotMarkers.push(mkr);
@@ -1615,9 +1599,9 @@ function dvRun() {
     : 'No team entries in range — using model value. Add rates via Enter Rates tab.';
   document.getElementById('dv-n-badge').textContent = hits.length ? hits.length + ' pts' : 'Model';
 
-  document.getElementById('fgv2').textContent = fmt(gvFinal) + ' /sqft';
-  document.getElementById('fgs2').textContent = fsm(gvFinal);
-  document.getElementById('dv-fge').textContent = wgv ? 'Weighted avg from ' + gvHits.length + ' team entries' : 'Model estimate (SRO/IGR basis)';
+  /* GV hidden — model data unreliable */
+
+
 
   document.getElementById('fem2').textContent  = hits.length || 'Model';
   document.getElementById('frng2').textContent = hits.length ? fmt(mn) + '–' + fmt(mx) : '—';
@@ -1629,13 +1613,13 @@ function dvRun() {
   if (hits.length) {
     document.getElementById('dv-comps').style.display = 'block';
     document.getElementById('dv-footer-rate').textContent = fmt(wfmv);
-    document.getElementById('dv-footer-gv').textContent   = wgv ? fmt(wgv) : '—';
+
     var dcl=document.getElementById('dv-comp-list'); if(!dcl) return; dcl.innerHTML = hits.map(function(h, i) {
       var w    = Math.round(weights[i] / wsum * 100);
       var barC = w>30 ? 'var(--g)' : w>15 ? 'var(--o)' : 'var(--n4)';
       var gvTx = h.e.guidelineValue ? fmt(h.e.guidelineValue) : '—';
       var bg   = i%2===0 ? 'var(--w)' : 'var(--s)';
-      return '<div style="display:grid;grid-template-columns:52px 1fr 72px 72px 54px 48px;'
+      return '<div style="display:grid;grid-template-columns:52px 1fr 72px 54px 48px;'
         + 'align-items:center;padding:7px 12px;border-bottom:1px solid var(--b);background:'+bg+'">'
         + '<div><div style="font-family:monospace;font-size:.65rem;font-weight:700;color:var(--o)">' + h.pin + '</div>'
         + (h.gps ? '<div style="font-size:.5rem;background:var(--gb);color:var(--g);padding:0 4px;border-radius:2px;display:inline-block">GPS</div>'
@@ -1647,7 +1631,7 @@ function dvRun() {
         + '<div style="height:100%;width:'+Math.max(w,2)+'%;background:'+barC+';border-radius:2px"></div>'
         + '</div></div>'
         + '<div style="text-align:right;font-size:.72rem;font-weight:800;color:var(--n)">' + fmt(h.e.marketRate) + '</div>'
-        + '<div style="text-align:right;font-size:.68rem;color:var(--g)">' + gvTx + '</div>'
+
         + '<div style="text-align:right;font-size:.68rem;font-weight:700;color:var(--n)">' + h.dist.toFixed(2) + 'km</div>'
         + '<div style="text-align:right;font-size:.72rem;font-weight:800;color:'+barC+'">' + w + '%</div>'
         + '</div>';
@@ -1729,14 +1713,14 @@ function dvCompute() {
   var dsl=document.getElementById('dv-sqft-label');if(dsl)dsl.textContent=sqft.toLocaleString('en-IN')+' sq ft  ≈  '+sqm.toLocaleString('en-IN')+' sq m';
   document.getElementById('dv-tmv').textContent         = fmtCr(tmv);
   document.getElementById('dv-tmv-rate').textContent    = fmt(fmvR) + '/sqft × ' + sqft.toLocaleString('en-IN') + ' sqft';
-  document.getElementById('dv-tgv').textContent         = fmtCr(tgv);
-  document.getElementById('dv-tgv-rate').textContent    = fmt(gvR) + '/sqft × ' + sqft.toLocaleString('en-IN') + ' sqft';
+
+
   document.getElementById('dv-loan').textContent        = fmtCr(loan);
   document.getElementById('dv-loan-n').textContent      = tc.lr + '% LTV on Geo-FMV';
   document.getElementById('dv-fsv').textContent         = fmtCr(fsvT);
   document.getElementById('dv-fsv-n').textContent       = Math.round(tc.fv*100) + '% of Total Market Value';
-  document.getElementById('dv-lgv').textContent         = fmtCr(lgv);
-  document.getElementById('dv-lgv-n').textContent       = tc.lr + '% LTV on Guideline Value';
+
+
   document.getElementById('dv-basis').textContent       =
     'Geo-FMV: ' + fmt(fmvR) + '/sqft  ·  GV: ' + fmt(gvR) + '/sqft  ·  '
     + DV.hits.length + ' comparables within ' + DV.rad + 'km  ·  '
@@ -1764,8 +1748,7 @@ function mfmv(){
   var txt='UGRO Collateral Intelligence - FMV Report\n'
     +'Pincode: '+x.pin+' | '+(x.dist?x.dist+', ':'')+x.state+'\n'
     +'Fair Market Value: '+fmt(x.fmv.fmv)+'/sqft ('+fsm(x.fmv.fmv)+')\n'
-    +'Guideline Value: '+fmt(x.gvd)+'/sqft\n'
-    +'Market Premium: +'+x.prm+'%\n'
+
     +'Data Points: '+x.fmv.count+' | Confidence: '+x.fmv.conf+'\n'
     +'Max Collateral: '+fmt(x.col)+'/sqft at '+x.tc.lr+'% LTV\n'
     +'Generated: '+new Date().toLocaleString('en-IN');
@@ -1917,8 +1900,8 @@ function rpt(){
   bod.push('<table>');
   bod.push('<tr><th>Metric</th><th>Value (Rs./sqft)</th><th>Basis</th></tr>');
   bod.push('<tr><td><b>Fair Market Value (IDW)</b></td><td style="font-weight:700;font-size:14px;color:#1a5c1a">'+mv.toLocaleString('en-IN')+'</td><td>Geo-weighted avg of '+dp+' comparable'+(dp===1?'':'s')+' (IDW p=2)</td></tr>');
-  bod.push('<tr><td>Guideline / Circle Rate</td><td style="font-weight:700">'+gv.toLocaleString('en-IN')+'</td><td>SRO / State IGR Reference</td></tr>');
-  bod.push('<tr><td>Market Premium over GV</td><td>+'+prm+'%</td><td>Forced sale risk indicator</td></tr>');
+
+
 
   bod.push('<tr><td>Forced Sale Value</td><td style="font-weight:700">'+fsv.toLocaleString('en-IN')+'</td><td>'+Math.round(tc.fv*100)+'% of FMV</td></tr>');
   bod.push('<tr><td>Zone</td><td>'+tc.l+'</td><td>LTV Ceiling: '+tc.lr+'% rec / '+tc.lm+'% max</td></tr>');
@@ -2147,7 +2130,7 @@ function g4render(pin,km){
   document.getElementById('g4-mv').textContent=fmt(p.mv)+' /sqft';
   document.getElementById('g4-mvs').textContent=fsm(p.mv)+' ('+p.cf+' confidence)';
   document.getElementById('g4-gv').textContent=fmt(p.gv)+' /sqft';
-  document.getElementById('g4-gvs').textContent=fsm(p.gv)+' (Circle/GV rate)';
+  var _g4gvs=document.getElementById('g4-gvs');if(_g4gvs)_g4gvs.textContent='';
 
   document.getElementById('g4-col').textContent=fmt(p.co);
   document.getElementById('g4-coln').textContent='At '+p.lr+'% of Market Value';
