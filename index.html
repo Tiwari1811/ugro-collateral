@@ -1881,108 +1881,125 @@ function rpt(){
     : '';
 
   var css=[
-    '@page{size:A4 portrait;margin:15mm 18mm}',
+    '@page{size:A4 portrait;margin:10mm 12mm}',
     '*{box-sizing:border-box;margin:0;padding:0}',
-    'body{font-family:Arial,sans-serif;font-size:12px;color:#1A1A1A;background:#fff}',
-    '.pg{max-width:900px;margin:0 auto;padding:0 20px 30px}',
-    '.np{background:#f0f0f0;border-bottom:1px solid #ccc;padding:8px 20px;display:flex;gap:8px;align-items:center;position:sticky;top:0;z-index:10}',
-    'h2{font-size:15px;font-weight:700;text-align:center;margin:16px 0 10px;text-decoration:underline}',
-    'h3{font-size:13px;font-weight:700;text-align:center;margin:14px 0 8px}',
-    'table{width:100%;border-collapse:collapse;margin-bottom:12px}',
-    'td,th{border:1px solid #999;padding:7px 10px;vertical-align:top;font-size:12px}',
-    'th{background:#f5f5f5;font-weight:700;text-align:center}',
-    '.hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 0 10px;border-bottom:2px solid #333;margin-bottom:14px}',
-    '.hdr-mid{text-align:center}',
-    '.hdr-mid h1{font-size:18px;font-weight:700;text-decoration:underline}',
-    '.hdr-mid p{font-size:11px;color:#555}',
-    '.logo-box{width:100px;text-align:left}',
-    '.logo-box img{max-height:44px;max-width:100px;object-fit:contain}',
-    '.section{margin-bottom:18px}',
-    '.map-wrap{border:1px solid #bbb;margin:4px 0;overflow:hidden;height:160px;background:#e8f4f8;position:relative}',
-    '.map-wrap iframe{width:100%;height:100%;border:none}',
-    '.terms{font-size:10px;color:#444;line-height:1.7;margin-top:10px}',
-    '.terms p{margin-bottom:6px}',
-    '.sign{text-align:right;margin-top:20px;font-size:11px;font-weight:700}',
-    '.ref-lbl{font-size:10px;color:#555;margin-top:4px}',
-    '@media print{.np{display:none!important}html,body{height:auto!important;overflow:visible!important}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}#rpt-map-container{height:220px!important;page-break-inside:avoid}table{page-break-inside:avoid}.hdr{page-break-after:avoid}.terms{page-break-inside:avoid}}'
-  ].join('');
+    'body{font-family:Arial,sans-serif;font-size:8.5px;color:#1A1A1A;background:#fff;line-height:1.35}',
+    '.pg{width:100%;padding:2px 4px 4px}',
+    '.np{background:#f0f0f0;border-bottom:1px solid #ccc;padding:6px 14px;display:flex;gap:8px;align-items:center;position:sticky;top:0;z-index:10}',
+    '.hdr{display:flex;align-items:center;justify-content:space-between;padding:4px 0 4px;border-bottom:2.5px solid #F47920;margin-bottom:5px}',
+    '.hdr-mid{text-align:center;flex:1}',
+    '.hdr-mid h1{font-size:13px;font-weight:700;color:#0A2D45;letter-spacing:0.5px}',
+    '.hdr-mid p{font-size:7px;color:#777;margin-top:1px}',
+    '.logo-box{width:80px}',
+    '.logo-box img{max-height:32px;max-width:80px;object-fit:contain}',
+    '.ugro-tag{width:80px;text-align:right;font-size:7px;color:#888;line-height:1.4}',
+    /* Two column layout */
+    '.cols{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:5px}',
+    '.col{}',
+    /* Section label */
+    '.slbl{font-size:7px;font-weight:700;color:#F47920;text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid #F47920;padding-bottom:1px;margin-bottom:3px;margin-top:4px}',
+    /* KV pairs */
+    '.kv{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #f0f0f0;font-size:8px}',
+    '.kv .k{color:#555;font-weight:600}',
+    '.kv .v{color:#1A1A1A;text-align:right;max-width:58%}',
+    /* FMV highlight box */
+    '.fmv-box{background:#0A2D45;color:#fff;padding:6px 10px;border-radius:4px;margin-bottom:4px}',
+    '.fmv-box .lbl{font-size:7px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:0.5px}',
+    '.fmv-box .val{font-size:18px;font-weight:800;color:#F47920;line-height:1.1}',
+    '.fmv-box .sub{font-size:7px;color:rgba(255,255,255,.55);margin-top:1px}',
+    /* Stat pills row */
+    '.stats{display:flex;gap:4px;margin-bottom:4px}',
+    '.stat{flex:1;background:#f5f8fa;border:1px solid #e0e8f0;border-radius:3px;padding:3px 5px}',
+    '.stat .sl{font-size:6.5px;color:#777;text-transform:uppercase;letter-spacing:0.5px}',
+    '.stat .sv{font-size:9px;font-weight:700;color:#0A2D45}',
+    /* Map */
+    '#rpt-map-container{width:100%;height:160px;border:1px solid #ccc;border-radius:3px;background:#e8f4f8;margin-bottom:3px}',
+    /* Ref table */
+    'table{width:100%;border-collapse:collapse;font-size:7.5px}',
+    'td,th{border:1px solid #ddd;padding:2.5px 5px;vertical-align:middle}',
+    'th{background:#0A2D45;color:#fff;font-weight:700;text-align:center;font-size:7px}',
+    'tr:nth-child(even) td{background:#f9f9f9}',
+    /* Disclaimer */
+    '.disc{font-size:6.5px;color:#999;border-top:1px solid #eee;margin-top:4px;padding-top:3px;line-height:1.4}',
+    /* Print */
+    '@media print{',
+      '.np{display:none!important}',
+      'html,body{height:auto!important;overflow:visible!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}',
+      '#rpt-map-container{height:160px!important}',
+    '}'  ].join('');
 
   var bod=[];
   bod.push('<div class="pg">');
 
   /* Action bar */
   bod.push('<div class="np">');
-  bod.push('<button onclick="window._rptPrint()" style="padding:6px 14px;background:#F47920;color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer">&#128438; Print / Save as PDF</button>');
-  bod.push('<button id="r-close" style="padding:6px 14px;background:#333;color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;margin-left:5px">&#10005; Close</button>');
-  bod.push('<span style="font-size:10px;color:#666;margin-left:10px">Use browser Print → Save as PDF</span>');
+  bod.push('<button onclick="window._rptPrint()" style="padding:5px 12px;background:#F47920;color:#fff;border:none;border-radius:3px;font-size:11px;font-weight:700;cursor:pointer">&#128438; Print / Save as PDF</button>');
+  bod.push('<button id="r-close" style="padding:5px 12px;background:#333;color:#fff;border:none;border-radius:3px;font-size:11px;font-weight:700;cursor:pointer;margin-left:5px">&#10005; Close</button>');
   bod.push('</div>');
 
-  /* Header — logo left, title centre, UGRO right */
+  /* Header */
   bod.push('<div class="hdr">');
   bod.push('<div class="logo-box"><img src="UGRO_LOGO_PLACEHOLDER" alt="UGRO Capital"></div>');
-  bod.push('<div class="hdr-mid"><h1>Desktop Valuation Report</h1></div>');
-  bod.push('<div style="width:100px;text-align:right"><div style="font-size:10px;color:#555;font-weight:600">UGRO Capital</div><div style="font-size:9px;color:#888">Collateral Intelligence</div></div>');
+  bod.push('<div class="hdr-mid"><h1>DESKTOP VALUATION REPORT</h1><p>UGRO Capital &mdash; Collateral Intelligence Platform &mdash; Internal Use Only</p></div>');
+  bod.push('<div class="ugro-tag"><b>UGRO Capital</b><br>Collateral Team<br>'+today+'</div>');
   bod.push('</div>');
 
-  /* Summary table */
+  /* Two-column layout */
+  bod.push('<div class="cols">');
+
+  /* LEFT COLUMN */
+  bod.push('<div class="col">');
+
+  /* FMV highlight */
+  bod.push('<div class="fmv-box">');
+  bod.push('<div class="lbl">Geo-Weighted Fair Market Value (IDW p=2)</div>');
+  bod.push('<div class="val">&#8377; '+mv.toLocaleString('en-IN')+' <span style="font-size:10px">/sqft</span></div>');
+  bod.push('<div class="sub">'+dp+' comparable'+(dp===1?'':'s')+' within '+rad+' km &nbsp;|&nbsp; Zone: '+tc.l+'</div>');
+  bod.push('</div>');
+
+  /* Stat pills */
+  bod.push('<div class="stats">');
+  bod.push('<div class="stat"><div class="sl">Forced Sale Value</div><div class="sv">&#8377;'+fsv.toLocaleString('en-IN')+'</div></div>');
+  bod.push('<div class="stat"><div class="sl">Range</div><div class="sv">'+fmt(mn)+' &ndash; '+fmt(mx)+'</div></div>');
+  bod.push('<div class="stat"><div class="sl">Variance</div><div class="sv">&plusmn;'+varPct+'%</div></div>');
+  bod.push('</div>');
+
+  /* Property details */
+  bod.push('<div class="slbl">Property Details</div>');
+  bod.push('<div class="kv"><span class="k">Address</span><span class="v">'+addrStr+'</span></div>');
+  bod.push('<div class="kv"><span class="k">Coordinates</span><span class="v">'+locStr+'</span></div>');
+  bod.push('<div class="kv"><span class="k">Nearest Pincode</span><span class="v">'+pin+(km?' (~'+km+' km)':'')+'</span></div>');
+  bod.push('<div class="kv"><span class="k">District / State</span><span class="v">'+(dist||'&mdash;')+' / '+state+'</span></div>');
+  bod.push('<div class="kv"><span class="k">Search Radius</span><span class="v">'+rad+' km</span></div>');
+  bod.push('<div class="kv"><span class="k">Ballpark Guidance</span><span class="v" style="color:#1a5c1a;font-weight:700">&#8377;'+Math.round(mn/100)*100+' &ndash; &#8377;'+Math.round(mx/100)*100+'/sqft</span></div>');
+  bod.push('<div class="kv"><span class="k">LTV Ceiling</span><span class="v">'+tc.lr+'% rec / '+tc.lm+'% max</span></div>');
+  bod.push('<div class="kv"><span class="k">Report Date</span><span class="v">'+todayFull+'</span></div>');
+  bod.push('<div class="kv"><span class="k">Purpose</span><span class="v">Audit &amp; Compliance &mdash; Collateral Assessment</span></div>');
+
+  /* Reference values table */
+  bod.push('<div class="slbl" style="margin-top:5px">Reference Comparables ('+(shown?shown.length:0)+' within '+rad+'km)</div>');
   bod.push('<table>');
-  bod.push('<tr><td style="width:35%;background:#f9f9f9;font-weight:600">Purpose of Report</td><td>Audit &amp; Compliance — Collateral Assessment</td></tr>');
-  bod.push('<tr><td style="background:#f9f9f9;font-weight:600">Location</td><td>'+locStr+'</td></tr>');
-  bod.push('<tr><td style="background:#f9f9f9;font-weight:600">Address</td><td>'+addrStr+'</td></tr>');
-  bod.push('<tr><td style="background:#f9f9f9;font-weight:600">Ballpark Guidance Rates</td><td style="font-weight:700;color:#1a5c1a">'+ballpark+'</td></tr>');
-  bod.push('<tr><td style="background:#f9f9f9;font-weight:600">Margin of Variance (+/- %)</td><td>&plusmn;'+varPct+'%</td></tr>');
-
-  bod.push('<tr><td style="background:#f9f9f9;font-weight:600">Date of Report</td><td>'+todayFull+'</td></tr>');
-  bod.push('</table>');
-
-  /* Geographic Attributes */
-  bod.push('<h2>Geographic Attributes</h2>');
-  bod.push('<table>');
-  bod.push('<tr><th style="width:35%">Address</th><td colspan="3">'+addrStr+'</td></tr>');
-  bod.push('<tr><th>Geo Location</th><th>Locality</th><th>City / District</th><th>State</th></tr>');
-  bod.push('<tr><td>'+locStr+'</td><td>'+loStr+'</td><td>'+(dist||state)+'</td><td>'+state+'</td></tr>');
-  bod.push('</table>');
-
-  /* FMV / GV table */
-  bod.push('<table>');
-  bod.push('<tr><th>Metric</th><th>Value (Rs./sqft)</th><th>Basis</th></tr>');
-  bod.push('<tr><td><b>Fair Market Value (IDW)</b></td><td style="font-weight:700;font-size:14px;color:#1a5c1a">'+mv.toLocaleString('en-IN')+'</td><td>Geo-weighted avg of '+dp+' comparable'+(dp===1?'':'s')+' (IDW p=2)</td></tr>');
-
-
-
-  bod.push('<tr><td>Forced Sale Value</td><td style="font-weight:700">'+fsv.toLocaleString('en-IN')+'</td><td>'+Math.round(tc.fv*100)+'% of FMV</td></tr>');
-  bod.push('<tr><td>Zone</td><td>'+tc.l+'</td><td>LTV Ceiling: '+tc.lr+'% rec / '+tc.lm+'% max</td></tr>');
-  bod.push('</table>');
-
-  /* Map — built via DOM injection after modal renders to avoid script-in-string issue */
-  var _rptLat=lat, _rptLng=lng, _rptRad=rad, _rptPin=pin, _rptKm=km, _rptHits=hits;
-  if(lat&&lng){
-    bod.push('<h2>Location Map — '+rad+' km Search Radius</h2>');
-    bod.push('<div id="rpt-map-container" style="height:280px;border:1px solid #ccc;border-radius:4px;margin:10px 0;background:#e8f4f8"></div>');
-    bod.push('<p class="ref-lbl">&#128205; Subject: '+lat.toFixed(7)+'°N, '+lng.toFixed(7)+'°E &nbsp;—&nbsp; Radius: '+rad+' km &nbsp;—&nbsp; Nearest pin: <b>'+pin+'</b>'+(km?' (~'+km+' km)':'')+'</p>');
-  }
-
-  /* Reference Values */
-  bod.push('<h2>Reference Values in '+rad+' km Radius</h2>');
-  bod.push('<table>');
-  bod.push('<tr><th>Distance</th><th>Recent Valuation Reference</th><th>Type of Property</th><th>Rate/Sqft (Rs.)</th></tr>');
+  bod.push('<tr><th>Dist</th><th>Type</th><th>Rate (&#8377;/sqft)</th><th>Date</th></tr>');
   bod.push(refRows);
   bod.push('</table>');
 
-  /* Terms */
-  bod.push('<div class="section">');
-  bod.push('<p style="font-weight:700;margin-bottom:6px">Terms &amp; Conditions:</p>');
-  bod.push('<div class="terms">');
-  bod.push('<p>1. The purpose of this report is to provide insights into the prevailing market prices / trends of a particular geographic area/location/region. The report or the value provided is not and cannot be attached to any particular property. The real estate market is heterogeneous and will vary from property to property. Users of this data will have to do their own due diligence before arriving at any value conclusion.</p>');
-  bod.push('<p>2. End use of this report is strictly restricted towards the purpose mentioned above. This report is a broad based assessment of the trends in the locality.</p>');
-  bod.push('<p>3. Basis of Value Estimation: Prices of concluded transactions / quoted rates of properties within the proximity of the given geographic area/locality/region were considered while arriving at the price estimation. UGRO branch-entered rates and the embedded UGRO land rate dataset (5,215 records across 10 states) form the primary reference corpus.</p>');
-  bod.push('</div>');
-  bod.push('<div class="sign"><b>For UGRO Capital Limited</b><br>Collateral Intelligence Platform<br>Internal Use Only — Confidential</div>');
-  bod.push('</div>');
+  bod.push('</div>'); /* end left col */
 
-  bod.push('</div>');
+  /* RIGHT COLUMN - Map */
+  bod.push('<div class="col">');
+  bod.push('<div class="slbl">Location Map &mdash; '+rad+' km Search Radius</div>');
+  bod.push('<div id="rpt-map-container"></div>');
+  bod.push('<p style="font-size:6.5px;color:#777;margin-top:2px">&#128205; '+lat.toFixed(6)+'&deg;N, '+lng.toFixed(6)+'&deg;E &nbsp;|&nbsp; <span style="color:#C0392B">&#9679;</span> Subject &nbsp;|&nbsp; <span style="color:#F47920">&#9679;</span> UGRO Funded Properties</p>');
+  bod.push('</div>'); /* end right col */
 
-  /* Add Leaflet + map init script directly into the printable doc */
+  bod.push('</div>'); /* end cols */
+
+  /* Disclaimer - single line */
+  bod.push('<div class="disc">&#9432; This Desktop Valuation Report is an indicative opinion based on geo-weighted IDW analysis of available comparable data for internal UGRO Capital use only. It does not constitute a formal valuation certificate and must not be relied upon for statutory, regulatory, or third-party purposes.</div>');
+
+  bod.push('</div>'); /* end pg */
+
+  /* Map init — self-contained script embedded in the report doc */
   var mapInitJs='';
   if(lat&&lng){
     var compPts=(_rptHits&&_rptHits.length)?_rptHits.slice(0,20).map(function(h){
@@ -1991,19 +2008,27 @@ function rpt(){
       if(!eLat||!eLng)return null;
       return '{lat:'+eLat+',lng:'+eLng+',r:'+Math.round(h.e.marketRate)+'}';
     }).filter(Boolean):[];
-    mapInitJs='<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">'
+    mapInitJs=''
+      +'<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">'
       +'<scr'+'ipt src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></scr'+'ipt>'
       +'<scr'+'ipt>'
-      +'window.addEventListener("load",function(){'
-        +'var mc=document.getElementById("rpt-map-container");if(!mc)return;'
+      +'function _iRM(){'
+        +'var mc=document.getElementById("rpt-map-container");'
+        +'if(!mc||!window.L){setTimeout(_iRM,200);return;}'
         +'var m=L.map(mc,{zoomControl:false,attributionControl:false}).setView(['+lat+','+lng+'],13);'
         +'L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(m);'
-        +'var si=L.divIcon({className:"",html:"<div style=\"width:13px;height:13px;background:#C0392B;border:2px solid #fff;border-radius:50%;box-shadow:0 0 5px rgba(192,57,43,.8)\"></div>",iconSize:[13,13],iconAnchor:[6,6]});'
-        +'L.marker(['+lat+','+lng+'],{icon:si}).addTo(m).bindPopup("Subject Property").openPopup();'
-        +'L.circle(['+lat+','+lng+'],{radius:'+rad*1000+',color:"#2E6B9E",weight:1.5,dashArray:"5,4",fillOpacity:0.05}).addTo(m);'
-        +(compPts.length?'['+compPts.join(',')+'].forEach(function(p){var ic=L.divIcon({className:"",html:"<div style=\"background:#F47920;border:2px solid #fff;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:800;color:#fff;white-space:nowrap\">\u20b9"+Math.round(p.r/1000)+"k</div>",iconSize:[1,1],iconAnchor:[0,8]});L.marker([p.lat,p.lng],{icon:ic}).addTo(m);});':'')
-        +'setTimeout(function(){m.invalidateSize();},300);'
-      +'});'
+        +'var si=L.divIcon({className:"",html:"<div style=\"width:14px;height:14px;background:#C0392B;border:2.5px solid #fff;border-radius:50%;box-shadow:0 0 6px rgba(192,57,43,.9)\"></div>",iconSize:[14,14],iconAnchor:[7,7]});'
+        +'L.marker(['+lat+','+lng+'],{icon:si}).addTo(m).bindPopup("<b style=\"color:#C0392B\">Subject Property</b><br>'+lat.toFixed(5)+'N '+lng.toFixed(5)+'E").openPopup();'
+        +'L.circle(['+lat+','+lng+'],{radius:'+(rad*1000)+',color:"#2E6B9E",weight:1.5,dashArray:"5,4",fillOpacity:0.05}).addTo(m);'
+        +(compPts.length?
+          '['+compPts.join(',')+'].forEach(function(p){'
+            +'var ic=L.divIcon({className:"",html:"<div style=\"background:#F47920;border:2px solid #fff;border-radius:3px;padding:1px 4px;font-size:7px;font-weight:800;color:#fff;white-space:nowrap\">\u20b9"+Math.round(p.r/1000)+"k</div>",iconSize:[1,1],iconAnchor:[0,8]});'
+            +'L.marker([p.lat,p.lng],{icon:ic}).addTo(m).bindPopup("UGRO Funded: \u20b9"+p.r.toLocaleString()+"/sqft");'
+          +'});'
+        :'')
+        +'setTimeout(function(){m.invalidateSize();},400);'
+      +'}'
+      +'setTimeout(_iRM,150);'
       +'</scr'+'ipt>';
   }
   var doc='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>DVR-'+pin+'</title>'+mapInitJs+'<style>'+css+'</style></head><body>'+bod.join('')+'</body></html>';
