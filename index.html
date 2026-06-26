@@ -512,8 +512,8 @@ img#lg{height:38px;width:auto;object-fit:contain;display:block}
             <div id="dv-click-dot" style="width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.2);margin-left:auto;flex-shrink:0"></div>
           </div>
           <div style="display:flex;gap:6px;margin-bottom:6px">
-            <input class="si" id="dv-lat" type="number" step="0.0001" placeholder="Latitude (°N)" style="flex:1">
-            <input class="si" id="dv-lng" type="number" step="0.0001" placeholder="Longitude (°E)" style="flex:1">
+            <input class="si" id="dv-lat" type="number" step="0.0001" placeholder="Latitude (°N)" style="flex:1" oninput="dvResetGenBtn()">
+            <input class="si" id="dv-lng" type="number" step="0.0001" placeholder="Longitude (°E)" style="flex:1" oninput="dvResetGenBtn()">
           </div>
           <div style="display:flex;gap:6px;margin-bottom:6px">
             <input class="si" id="dv-area" type="number" inputmode="decimal" placeholder="Land area" oninput="dvCompute()" style="flex:2">
@@ -528,7 +528,7 @@ img#lg{height:38px;width:auto;object-fit:contain;display:block}
             </select>
           </div>
           <div style="display:flex;gap:6px">
-            <select class="si" id="dv-rad" style="flex:1">
+            <select class="si" id="dv-rad" style="flex:1" onchange="dvResetGenBtn()">
               <option value="5">5 km radius</option>
               <option value="10" selected>10 km</option>
               <option value="15">15 km</option>
@@ -537,7 +537,10 @@ img#lg{height:38px;width:auto;object-fit:contain;display:block}
             </select>
             <button class="sbtn sec" onclick="dvGps()" style="flex:1;margin-top:0;padding:8px 6px">&#128205; GPS</button>
           </div>
-          <button class="sbtn" onclick="dvRunAndReport()" style="margin-top:6px">&#128196; Generate DVR Report</button>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <button class="sbtn" onclick="dvCompute2()" style="flex:1">&#128202; Compute</button>
+            <button class="sbtn sec" id="dv-gen-btn" onclick="dvGenReport()" style="flex:1;opacity:0.4;cursor:not-allowed" disabled>&#128196; Generate DVR</button>
+          </div>
         </div>
 
         <!-- DV result card — same structure as fc -->
@@ -1356,6 +1359,11 @@ var DV_UNITS = {
   acre:43560, bigha:26910, ground:2400
 };
 
+function dvResetGenBtn(){
+  var btn = document.getElementById('dv-gen-btn');
+  if(btn){ btn.disabled=true; btn.style.opacity='0.4'; btn.style.cursor='not-allowed'; }
+}
+
 function dvGps() {
   if (!navigator.geolocation) { tn('Geolocation not supported — enter coordinates manually'); return; }
   tn('Requesting GPS...');
@@ -1371,13 +1379,30 @@ function dvGps() {
   );
 }
 
-function dvRunAndReport(){
+function dvCompute2(){
+  /* Run valuation and show result card in panel — does NOT open the report */
   dvRun();
-  /* Wait for dvRun to complete then open report */
   setTimeout(function(){
-    if(LF){ rpt(); }
-    else { tn('Valuation not ready — check coordinates and try again'); }
-  }, 800);
+    if(LF){
+      /* Enable the Generate DVR button */
+      var btn = document.getElementById('dv-gen-btn');
+      if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.style.cursor='pointer'; }
+      tn('Valuation computed — click Generate DVR to open report');
+    } else {
+      tn('Valuation failed — check coordinates and try again');
+    }
+  }, 400);
+}
+
+function dvGenReport(){
+  /* Open the full DVR report — only callable after Compute */
+  if(!LF){ tn('Run Compute first'); return; }
+  rpt();
+}
+
+function dvRunAndReport(){
+  /* Legacy — kept for backward compat */
+  dvCompute2();
 }
 
 
@@ -1659,6 +1684,9 @@ function dvRun() {
   MKR.openPopup();
   lmDrawCircle(lat, lng, rad);
   lmClearMarkers();
+  window._dvMarkers = window._dvMarkers || [];
+  window._dvMarkers.forEach(function(m){try{MAP.removeLayer(m);}catch(e){}});
+  window._dvMarkers = [];
   hits.forEach(function(h,i){
     var w = Math.round(weights[i]/wsum*100);
     var r = Math.max(7, Math.min(16, 7+w/7));
@@ -2385,16 +2413,16 @@ function lmFetch() {
 
   /* Sync radius and draw circle */
   var rad = parseFloat(document.getElementById('lm-rad2').value) || 5;
-  lmDrawCircle(lat, lng, rad);
-
-  MAP.flyTo([lat, lng], lmZoomForRadius(rad), { duration: 1.2 });
   var areaName = (document.getElementById('lm-area') ? document.getElementById('lm-area').value : '').trim();
   LM.area = areaName;
   tn('Resolved to ' + best + (areaName ? ' (' + areaName + ')' : '') + ' — ' + (dist || state) + ' (~' + km + 'km)');
   /* Hide pincode card in geo mode — show only geo panel */
   var fcEl = document.getElementById('fc');
   if (fcEl) fcEl.style.display = 'none';
-  lmNearby();
+  /* Draw circle first, then fly — plot markers AFTER fly animation completes */
+  lmDrawCircle(lat, lng, rad);
+  MAP.flyTo([lat, lng], lmZoomForRadius(rad), { duration: 0.8 });
+  setTimeout(function(){ lmNearby(); }, 900);
 }
 
 
@@ -2632,6 +2660,8 @@ function lmNearby() {
     ).addTo(MAP);
     GEO_MARKERS.push(marker);
   });
+  /* Ensure map tiles are rendered before markers appear */
+  if (MAP) MAP.invalidateSize();
   /* Scroll left panel so geo result is visible */
   var nb = document.getElementById('lm-nearby');
   if (nb) setTimeout(function(){ nb.scrollIntoView({behavior:'smooth',block:'nearest'}); }, 100);
