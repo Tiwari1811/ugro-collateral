@@ -12,7 +12,7 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden}
 .app{position:fixed;inset:0;display:flex;flex-direction:column}
 header{height:56px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:var(--n);box-shadow:0 2px 12px rgba(10,45,69,.5);z-index:100}
 .logo{display:flex;align-items:center;gap:11px}
-.logo img{height:32px;width:auto;object-fit:contain;border-radius:3px}
+.logo img{height:36px;width:auto;object-fit:contain;border-radius:3px}
 .ldv{width:1px;height:26px;background:rgba(255,255,255,.18);flex-shrink:0}
 .ln{font-size:.82rem;font-weight:700;color:#fff;letter-spacing:.03em}
 .ls{font-size:.5rem;color:rgba(255,255,255,.42);letter-spacing:.1em;text-transform:uppercase;margin-top:1px}
@@ -58,7 +58,7 @@ header{height:56px;flex-shrink:0;display:flex;align-items:center;justify-content
 /* ── Header ── */
 
 
-img#lg{height:26px;width:auto;display:none}
+img#lg{height:38px;width:auto;object-fit:contain;display:block}
 
 
 
@@ -272,10 +272,9 @@ img#lg{height:26px;width:auto;display:none}
         <div class="ls">Secured MSME Lending · Land Valuation Search Engine</div>
       </div>
     </div>
-    <div class="hps">
-      <div class="hp">19,486 Pincodes</div>
-      <div class="hp">Market + GV ₹/sqft</div>
-      <div class="hp" id="dbg">Model Data</div>
+    <div id="user-strip" style="display:none;align-items:center;gap:12px;">
+        <span id="user-label" style="color:rgba(255,255,255,0.75);font-size:11.5px;font-weight:500;letter-spacing:0.3px;"></span>
+        <button onclick="lgLogout()" style="background:rgba(255,255,255,0.13);color:#fff;border:1px solid rgba(255,255,255,0.3);padding:5px 14px;border-radius:6px;cursor:pointer;font-size:11.5px;font-weight:600;letter-spacing:0.5px;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.13)'">&#x23FB; Logout</button>
     </div>
   </header>
 
@@ -525,8 +524,21 @@ img#lg{height:26px;width:auto;display:none}
             </select>
             <button class="sbtn sec" onclick="dvGps()" style="flex:1;margin-top:0;padding:8px 6px">&#128205; GPS</button>
           </div>
-          <button class="sbtn" onclick="dvRun()" style="margin-top:6px">&#128202; Generate Desktop Valuation</button>
-          <button class="sbtn sec" onclick="dvRunAndReport()" style="margin-top:5px">&#128196; Generate DVR Report</button>
+          <!-- GPS Map Plot -->
+          <div style="margin-top:8px;border:1.5px solid rgba(255,255,255,.12);border-radius:7px;overflow:hidden">
+            <div style="background:rgba(255,255,255,.06);padding:6px 12px;display:flex;justify-content:space-between;align-items:center">
+              <div style="font-size:.56rem;font-weight:700;color:rgba(255,255,255,.55);letter-spacing:.08em;text-transform:uppercase">&#127759; GPS Location Plot</div>
+              <button onclick="dvPlotGps()" style="background:var(--o);color:#fff;border:none;border-radius:5px;padding:4px 11px;font-size:.56rem;font-weight:700;cursor:pointer">&#128205; Plot on Map</button>
+            </div>
+            <div id="dv-map-mini" style="height:160px;background:var(--s2);position:relative">
+              <div id="dv-map-placeholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--mu)">
+                <div style="font-size:1.4rem">&#128205;</div>
+                <div style="font-size:.6rem">Enter lat/long or use GPS, then click Plot on Map</div>
+              </div>
+            </div>
+            <div id="dv-nearby-rates" style="display:none;border-top:1px solid var(--b);max-height:100px;overflow-y:auto"></div>
+          </div>
+          <button class="sbtn" onclick="dvRunAndReport()" style="margin-top:6px">&#128196; Generate DVR Report</button>
         </div>
 
         <!-- DV result card — same structure as fc -->
@@ -671,8 +683,17 @@ function lgInit() {
   /* Check session */
   try {
     var sess = sessionStorage.getItem('ugro_auth');
-    if (sess === 'ok') { lgGrant(); return; }
+    if (sess === 'ok') { lgGrant(sessionStorage.getItem('ugro_user')); return; }
   } catch(e) {}
+}
+
+function lgIsFieldUser() {
+  try { return sessionStorage.getItem('ugro_user') === 'field_user'; } catch(e) { return false; }
+}
+
+function lgLogout() {
+  try { sessionStorage.removeItem('ugro_auth'); sessionStorage.removeItem('ugro_user'); } catch(e) {}
+  location.reload();
 }
 
 function lgLogin() {
@@ -700,6 +721,7 @@ function lgLogin() {
 }
 
 function lgGrant(user) {
+  try { if (user) sessionStorage.setItem('ugro_user', user); } catch(e) {}
   try { sessionStorage.setItem('ugro_auth', 'ok'); } catch(e) {}
   var gate = document.getElementById('login-gate');
   if (gate) {
@@ -707,7 +729,14 @@ function lgGrant(user) {
     gate.style.transition = 'opacity 0.4s';
     setTimeout(function(){ gate.style.display = 'none'; }, 420);
   }
-  if (user) tn('Welcome, ' + user + ' \u2014 Platform ready');
+  var u = user || (function(){ try { return sessionStorage.getItem('ugro_user'); } catch(e){ return ''; } })();
+  var roleMap = { 'ugro_admin':'Admin', 'collateral_hd':'Collateral Head', 'field_user':'Field User', 'ugro_view':'Viewer' };
+  var role = roleMap[u] || u;
+  var strip = document.getElementById('user-strip');
+  var lbl = document.getElementById('user-label');
+  if (strip) strip.style.display = 'flex';
+  if (lbl) lbl.textContent = '\u{1F464} ' + u + ' \u00B7 ' + role;
+  if (user) tn('Welcome, ' + u + ' \u2014 Platform ready');
 }
 
 
@@ -1103,7 +1132,7 @@ function rndrC(){
       +'<div style="font-size:.61rem;color:var(--mu)">'+(item.dist?item.dist+', ':'')+item.state+'</div></div>'
       +'<div style="text-align:right"><div style="font-family:monospace;font-size:.67rem;color:var(--n);font-weight:600">'+fmt(item.p.mv)+'</div>'
       +'<div style="font-size:.61rem;color:var(--g)">GV: '+fmt(item.p.gv)+'</div></div>'
-      +'<span style="color:var(--ml);cursor:pointer;padding:0 3px" onclick="rmC('+idx+')">&#10005;</span>';
+      +(lgIsFieldUser()?'':'<span style="color:var(--ml);cursor:pointer;padding:0 3px" onclick="rmC('+idx+')">&#10005;</span>');
     d.onclick=function(e){if(e.target.tagName!=='SPAN'){document.getElementById('pi').value=item.pin;ds();}};
     el.appendChild(d);
   });
@@ -1161,12 +1190,13 @@ function rndrE(fp){
       +'<div style="text-align:right"><div class="enr">'+fmt(e.marketRate)+'<span style="font-size:.6rem;color:var(--mu)">/sqft</span></div>'
       +(e.guidelineValue?'<div style="font-size:.64rem;color:var(--g)">GV: '+fmt(e.guidelineValue)+'</div>':'')
       +'</div></div>'
-      +'<span class="edl" onclick="dlE('+e._pin+','+e.id+')">&#10005;</span>'
+      +(lgIsFieldUser()?'':'<span class="edl" onclick="dlE('+e._pin+','+e.id+')">&#10005;</span>')
       +'</div>';
   }).join('');
 }
 
 function dlE(pin,id){
+  if(lgIsFieldUser()){tn('Access denied: field_user cannot delete entries');return;}
   var d=gAD();if(d[pin])d[pin]=d[pin].filter(function(e){return e.id!==id;});
   localStorage.setItem(SK,JSON.stringify(d));
   rndrE(/^\d{6}$/.test(document.getElementById('enp').value)?document.getElementById('enp').value:null);
@@ -1196,7 +1226,7 @@ function impJ(event){
   };
   reader.readAsText(file);event.target.value='';
 }
-function clrA(){if(!confirm('Delete ALL rate data? Cannot be undone.'))return;localStorage.removeItem(SK);updEC();rndrE(null);tn('All entries cleared');}
+function clrA(){if(lgIsFieldUser()){tn('Access denied: field_user cannot delete entries');return;} if(!confirm('Delete ALL rate data? Cannot be undone.'))return;localStorage.removeItem(SK);updEC();rndrE(null);tn('All entries cleared');}
 
 /* FMV */
 function cFMV(pin){
@@ -1259,6 +1289,100 @@ function dvRunAndReport(){
     if(LF){ rpt(); }
     else { tn('Valuation not ready — check coordinates and try again'); }
   }, 800);
+}
+
+
+function dvPlotGps() {
+  var lat = parseFloat(document.getElementById('dv-lat').value);
+  var lng = parseFloat(document.getElementById('dv-lng').value);
+  if (isNaN(lat) || isNaN(lng)) {
+    tn('Enter latitude & longitude first, or use GPS button');
+    return;
+  }
+
+  var ph = document.getElementById('dv-map-placeholder');
+  var mc = document.getElementById('dv-map-mini');
+  if (ph) ph.style.display = 'none';
+
+  /* Destroy existing mini-map if any */
+  if (window._dvMiniMap) {
+    try { window._dvMiniMap.remove(); } catch(e) {}
+    window._dvMiniMap = null;
+  }
+
+  /* Create container div for Leaflet inside dv-map-mini */
+  var mapDiv = document.getElementById('dv-leaflet-mini');
+  if (!mapDiv) {
+    mapDiv = document.createElement('div');
+    mapDiv.id = 'dv-leaflet-mini';
+    mapDiv.style.cssText = 'width:100%;height:160px';
+    mc.appendChild(mapDiv);
+  }
+
+  var m = L.map('dv-leaflet-mini', {zoomControl:true, attributionControl:false}).setView([lat, lng], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(m);
+  window._dvMiniMap = m;
+
+  /* Subject pin */
+  var subIcon = L.divIcon({
+    html: '<div style="background:#F47920;border:2px solid #fff;border-radius:50%;width:14px;height:14px;box-shadow:0 0 6px rgba(0,0,0,.4)"></div>',
+    iconSize:[14,14], iconAnchor:[7,7], className:''
+  });
+  L.marker([lat, lng], {icon: subIcon})
+    .addTo(m)
+    .bindPopup('<b style="color:#F47920">&#128205; Subject Property</b><br>' + lat.toFixed(5) + '°N, ' + lng.toFixed(5) + '°E')
+    .openPopup();
+
+  /* Pull nearby rate entries from local storage and plot them */
+  var rad = parseFloat(document.getElementById('dv-rad').value) || 10;
+  var all = gAD();
+  var hits = [];
+
+  for (var pin in all) {
+    all[pin].forEach(function(e) {
+      var elat = e.geo && e.geo.lat ? e.geo.lat : null;
+      var elng = e.geo && e.geo.lng ? e.geo.lng : null;
+      if (!elat || !elng) return;
+      var dlat = elat - lat, dlng = elng - lng;
+      var dist = Math.sqrt(dlat*dlat + dlng*dlng) * 111;
+      if (dist <= rad) hits.push({lat:elat, lng:elng, pin:pin, rate:e.marketRate, gv:e.guidelineValue, type:e.propertyType, dist:dist.toFixed(1)});
+    });
+  }
+
+  /* Also use pincode centroids from database for context */
+  var PC = window._PC || {};
+  var rateHtml = '';
+
+  hits.forEach(function(h) {
+    var rateIcon = L.divIcon({
+      html: '<div style="background:#0D7A4C;border:2px solid #fff;border-radius:3px;padding:2px 4px;font-size:9px;font-weight:700;color:#fff;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.3)">₹' + Math.round(h.rate/1000) + 'k</div>',
+      iconSize:'auto', iconAnchor:[0,0], className:''
+    });
+    L.marker([h.lat, h.lng], {icon: rateIcon})
+      .addTo(m)
+      .bindPopup(
+        '<b>' + h.pin + '</b> · ' + (h.type||'Land') + '<br>' +
+        '<span style="color:#0D7A4C;font-weight:700">FMV: ₹' + Math.round(h.rate).toLocaleString('en-IN') + '/sqft</span>' +
+        (h.gv ? '<br><span style="color:#2E6B9E">GV: ₹' + Math.round(h.gv).toLocaleString('en-IN') + '/sqft</span>' : '') +
+        '<br><span style="font-size:10px;color:#666">~' + h.dist + ' km away</span>'
+      );
+    rateHtml += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 10px;border-bottom:1px solid var(--b);font-size:.54rem">'
+      + '<span style="color:var(--t)">' + h.pin + ' · ' + (h.type||'Land') + '</span>'
+      + '<span style="color:var(--g);font-weight:700">₹' + Math.round(h.rate).toLocaleString('en-IN') + '/sqft</span>'
+      + '<span style="color:var(--mu)">' + h.dist + ' km</span></div>';
+  });
+
+  var nb = document.getElementById('dv-nearby-rates');
+  if (hits.length > 0) {
+    nb.style.display = 'block';
+    nb.innerHTML = '<div style="padding:3px 10px;background:var(--n);font-size:.48rem;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.1em;text-transform:uppercase">Nearby Rate Entries (' + hits.length + ')</div>' + rateHtml;
+    tn(hits.length + ' nearby rate entries plotted');
+  } else {
+    nb.style.display = 'none';
+    tn('No GPS-tagged entries within ' + rad + ' km — add entries with GPS tags');
+  }
+
+  setTimeout(function(){ m.invalidateSize(); }, 100);
 }
 
 function dvRun() {
