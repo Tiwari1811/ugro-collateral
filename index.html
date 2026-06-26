@@ -460,6 +460,15 @@ img#lg{height:38px;width:auto;object-fit:contain;display:block}
       <div class="tc" id="tc2">
         <div class="szn">
           <div class="szl">Enter Team Rate</div>
+          <!-- Map click hint -->
+          <div id="er-click-hint" style="display:flex;align-items:center;gap:7px;padding:7px 10px;margin-bottom:8px;background:rgba(244,121,32,.1);border:1px dashed rgba(244,121,32,.4);border-radius:6px;cursor:pointer" onclick="erEnableClick()">
+            <div style="font-size:1.1rem">&#128205;</div>
+            <div style="flex:1">
+              <div style="font-size:.62rem;font-weight:700;color:var(--ol)">Click on map to pin coordinates</div>
+              <div style="font-size:.54rem;color:rgba(255,255,255,.45)" id="er-click-status">Tap to enable map click mode</div>
+            </div>
+            <div id="er-click-dot" style="width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.2);margin-left:auto;flex-shrink:0"></div>
+          </div>
           <input class="si" id="enp" type="text" maxlength="6" inputmode="numeric" placeholder="Pincode (6 digits)" style="margin-bottom:5px">
           <input class="si" id="enm" type="number" inputmode="decimal" placeholder="Market Rate (₹/sqft)" style="margin-bottom:5px">
           <input class="si" id="eng" type="number" inputmode="decimal" placeholder="Guideline Value (₹/sqft)" style="margin-bottom:5px">
@@ -498,6 +507,15 @@ img#lg{height:38px;width:auto;object-fit:contain;display:block}
       <div class="tc" id="tc3">
         <div class="szn">
           <div class="szl">Desktop Valuation by Coordinates</div>
+          <!-- Map click hint -->
+          <div id="dv-click-hint" style="display:flex;align-items:center;gap:7px;padding:7px 10px;margin-bottom:8px;background:rgba(244,121,32,.1);border:1px dashed rgba(244,121,32,.4);border-radius:6px;cursor:pointer" onclick="dvEnableClick()">
+            <div style="font-size:1.1rem">&#128205;</div>
+            <div style="flex:1">
+              <div style="font-size:.62rem;font-weight:700;color:var(--ol)">Click on map to pin coordinates</div>
+              <div style="font-size:.54rem;color:rgba(255,255,255,.45)" id="dv-click-status">Tap to enable map click mode</div>
+            </div>
+            <div id="dv-click-dot" style="width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.2);margin-left:auto;flex-shrink:0"></div>
+          </div>
           <div style="display:flex;gap:6px;margin-bottom:6px">
             <input class="si" id="dv-lat" type="number" step="0.0001" placeholder="Latitude (°N)" style="flex:1">
             <input class="si" id="dv-lng" type="number" step="0.0001" placeholder="Longitude (°E)" style="flex:1">
@@ -524,20 +542,6 @@ img#lg{height:38px;width:auto;object-fit:contain;display:block}
             </select>
             <button class="sbtn sec" onclick="dvGps()" style="flex:1;margin-top:0;padding:8px 6px">&#128205; GPS</button>
           </div>
-          <!-- GPS Map Plot -->
-          <div style="margin-top:8px;border:1.5px solid rgba(255,255,255,.12);border-radius:7px;overflow:hidden">
-            <div style="background:rgba(255,255,255,.06);padding:6px 12px;display:flex;justify-content:space-between;align-items:center">
-              <div style="font-size:.56rem;font-weight:700;color:rgba(255,255,255,.55);letter-spacing:.08em;text-transform:uppercase">&#127759; GPS Location Plot</div>
-              <button onclick="dvPlotGps()" style="background:var(--o);color:#fff;border:none;border-radius:5px;padding:4px 11px;font-size:.56rem;font-weight:700;cursor:pointer">&#128205; Plot on Map</button>
-            </div>
-            <div id="dv-map-mini" style="height:160px;background:var(--s2);position:relative">
-              <div id="dv-map-placeholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--mu)">
-                <div style="font-size:1.4rem">&#128205;</div>
-                <div style="font-size:.6rem">Enter lat/long or use GPS, then click Plot on Map</div>
-              </div>
-            </div>
-            <div id="dv-nearby-rates" style="display:none;border-top:1px solid var(--b);max-height:100px;overflow-y:auto"></div>
-          </div>
           <button class="sbtn" onclick="dvRunAndReport()" style="margin-top:6px">&#128196; Generate DVR Report</button>
         </div>
 
@@ -557,14 +561,16 @@ img#lg{height:38px;width:auto;object-fit:contain;display:block}
           <div class="rv">
             <div class="rvc">
               <div class="rvl o">● Geo-Weighted FMV</div>
-              <div class="rvv" id="fvv">—</div>
-              <div class="rvs" id="fvs">IDW p=2</div>
+              <div class="rvv" id="dv-fvv">—</div>
+              <div class="rvs" id="dv-fvs">IDW p=2</div>
+              <div style="font-size:.5rem;color:rgba(255,255,255,.3)" id="dv-fve">—</div>
             </div>
             <div class="rvd"></div>
             <div class="rvc">
               <div class="rvl g">● Guideline Value</div>
               <div class="rvv" id="fgv2" style="color:var(--g)">—</div>
               <div class="rvs" id="fgs2">—</div>
+              <div style="font-size:.5rem;color:rgba(255,255,255,.3)" id="dv-fge">—</div>
             </div>
           </div>
           <div class="fst">
@@ -732,11 +738,15 @@ function lgGrant(user) {
   var u = user || (function(){ try { return sessionStorage.getItem('ugro_user'); } catch(e){ return ''; } })();
   var roleMap = { 'ugro_admin':'Admin', 'collateral_hd':'Collateral Head', 'field_user':'Field User', 'ugro_view':'Viewer' };
   var role = roleMap[u] || u;
-  var strip = document.getElementById('user-strip');
-  var lbl = document.getElementById('user-label');
-  if (strip) strip.style.display = 'flex';
-  if (lbl) lbl.textContent = '\u{1F464} ' + u + ' \u00B7 ' + role;
-  if (user) tn('Welcome, ' + u + ' \u2014 Platform ready');
+  function _applyStrip(){
+    var strip = document.getElementById('user-strip');
+    var lbl = document.getElementById('user-label');
+    if (strip) strip.style.display = 'flex';
+    if (lbl) lbl.textContent = '\u{1F464} ' + u + ' \u00B7 ' + role;
+  }
+  if(document.getElementById('user-strip')) _applyStrip();
+  else setTimeout(_applyStrip, 200);
+  if (user) setTimeout(function(){ tn('Welcome, ' + u + ' \u2014 Platform ready'); }, 250);
 }
 
 
@@ -966,38 +976,133 @@ function initMap(){
     if(!MAP_CLICK_MODE) return;
     var lat = Math.round(e.latlng.lat * 100000) / 100000;
     var lng = Math.round(e.latlng.lng * 100000) / 100000;
-    /* Fill lat/lng fields */
-    var lel = document.getElementById('lm-lat');
-    var lnl = document.getElementById('lm-lng');
-    if(lel) lel.value = lat;
-    if(lnl) lnl.value = lng;
-    /* Switch to geo mode if not already */
-    lmSwitch('geo');
-    /* Reverse geocode via Nominatim for area name */
-    var areaEl = document.getElementById('lm-area');
-    if(areaEl){
-      areaEl.value = 'Resolving location...';
+
+    /* Determine active tab */
+    var activeTab = 1;
+    if(document.getElementById('tc2') && document.getElementById('tc2').classList.contains('on')) activeTab = 2;
+    if(document.getElementById('tc3') && document.getElementById('tc3').classList.contains('on')) activeTab = 3;
+
+    if(activeTab === 1){
+      /* Lookup tab — fill lm-lat/lm-lng, switch to geo, fetch FMV */
+      var lel = document.getElementById('lm-lat');
+      var lnl = document.getElementById('lm-lng');
+      if(lel) lel.value = lat;
+      if(lnl) lnl.value = lng;
+      lmSwitch('geo');
+      var areaEl = document.getElementById('lm-area');
+      if(areaEl){
+        areaEl.value = 'Resolving location...';
+        fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lng+'&format=json&zoom=14&addressdetails=1')
+          .then(function(r){return r.json();})
+          .then(function(d){
+            var a = d.address || {};
+            var name = a.suburb || a.neighbourhood || a.village || a.town || a.city_district || a.county || a.city || '';
+            var dist = a.state_district || a.county || '';
+            var state = a.state || '';
+            areaEl.value = [name, dist, state].filter(Boolean).join(', ');
+          })
+          .catch(function(){ areaEl.value = lat+', '+lng; });
+      }
+      lmFetch();
+      var dot = document.getElementById('lm-click-dot');
+      if(dot) dot.style.background = 'var(--g)';
+      var st = document.getElementById('lm-click-status');
+      if(st) st.textContent = '✓ Pinned — click again to update';
+
+    } else if(activeTab === 2){
+      /* Enter Rates tab — fill en-lat/en-lng + area */
+      var el = document.getElementById('en-lat');
+      var nl = document.getElementById('en-lng');
+      if(el) el.value = lat;
+      if(nl) nl.value = lng;
+      var areaEl2 = document.getElementById('ena');
+      if(areaEl2){
+        areaEl2.value = 'Resolving...';
+        fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lng+'&format=json&zoom=14&addressdetails=1')
+          .then(function(r){return r.json();})
+          .then(function(d){
+            var a = d.address || {};
+            var name = a.suburb || a.neighbourhood || a.village || a.town || a.city_district || a.county || a.city || '';
+            var dist = a.state_district || a.county || '';
+            var state = a.state || '';
+            areaEl2.value = [name, dist, state].filter(Boolean).join(', ');
+          })
+          .catch(function(){ areaEl2.value = lat+', '+lng; });
+      }
+      /* Also auto-fill pincode from reverse geocode */
       fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lng+'&format=json&zoom=14&addressdetails=1')
         .then(function(r){return r.json();})
         .then(function(d){
-          var a = d.address || {};
-          var name = a.suburb || a.neighbourhood || a.village || a.town || a.city_district || a.county || a.city || '';
-          var dist = a.state_district || a.county || '';
-          var state = a.state || '';
-          areaEl.value = [name, dist, state].filter(Boolean).join(', ');
-        })
-        .catch(function(){ areaEl.value = lat+', '+lng; });
+          var pc = (d.address||{}).postcode || '';
+          if(pc && pc.length===6){ var pf=document.getElementById('enp'); if(pf&&!pf.value) pf.value=pc; }
+        }).catch(function(){});
+      var dot2 = document.getElementById('er-click-dot');
+      if(dot2) dot2.style.background = 'var(--g)';
+      var st2 = document.getElementById('er-click-status');
+      if(st2) st2.textContent = '✓ Pinned at '+lat+'°N, '+lng+'°E — click again to update';
+      tn('Coordinates pinned: '+lat+'°N, '+lng+'°E');
+
+    } else if(activeTab === 3){
+      /* Desktop DVR tab — fill dv-lat/dv-lng */
+      var dl = document.getElementById('dv-lat');
+      var dn = document.getElementById('dv-lng');
+      if(dl) dl.value = lat;
+      if(dn) dn.value = lng;
+      var dot3 = document.getElementById('dv-click-dot');
+      if(dot3) dot3.style.background = 'var(--g)';
+      var st3 = document.getElementById('dv-click-status');
+      if(st3) st3.textContent = '✓ Pinned at '+lat+'°N, '+lng+'°E — click again to update';
+      tn('Coordinates pinned: '+lat+'°N, '+lng+'°E — click Generate DVR Report');
     }
-    /* Trigger FMV */
-    lmFetch();
-    /* Keep click mode active */
-    var dot = document.getElementById('lm-click-dot');
-    if(dot) dot.style.background = 'var(--g)';
-    var st = document.getElementById('lm-click-status');
-    if(st) st.textContent = '✓ Pinned — click again to update';
   });
   /* Force Leaflet to recalculate container size after layout settles */
   setTimeout(function(){ if(MAP) MAP.invalidateSize(); }, 300);
+}
+
+
+/* ── Tab-specific map click enable/disable ── */
+function erEnableClick(){
+  MAP_CLICK_MODE = !MAP_CLICK_MODE;
+  /* Switch to Enter Rates tab first */
+  sw(2);
+  var dot = document.getElementById('er-click-dot');
+  var st  = document.getElementById('er-click-status');
+  var hint = document.getElementById('er-click-hint');
+  if(MAP_CLICK_MODE){
+    if(dot)  { dot.style.background='var(--o)'; dot.style.boxShadow='0 0 0 3px rgba(244,121,32,.3)'; }
+    if(st)   st.textContent = 'Click anywhere on the map → fills coordinates + area';
+    if(hint) { hint.style.background='rgba(244,121,32,.18)'; hint.style.borderColor='var(--o)'; }
+    MAP.getContainer().style.cursor = 'crosshair';
+    tn('Map click ON — click map to pin coordinates for rate entry');
+  } else {
+    if(dot)  { dot.style.background='rgba(255,255,255,.2)'; dot.style.boxShadow=''; }
+    if(st)   st.textContent = 'Tap to enable map click mode';
+    if(hint) { hint.style.background='rgba(244,121,32,.1)'; hint.style.borderColor='rgba(244,121,32,.4)'; }
+    MAP.getContainer().style.cursor = '';
+    tn('Map click mode OFF');
+  }
+}
+
+function dvEnableClick(){
+  MAP_CLICK_MODE = !MAP_CLICK_MODE;
+  /* Switch to DVR tab */
+  sw(3);
+  var dot = document.getElementById('dv-click-dot');
+  var st  = document.getElementById('dv-click-status');
+  var hint = document.getElementById('dv-click-hint');
+  if(MAP_CLICK_MODE){
+    if(dot)  { dot.style.background='var(--o)'; dot.style.boxShadow='0 0 0 3px rgba(244,121,32,.3)'; }
+    if(st)   st.textContent = 'Click anywhere on the map → fills lat/long';
+    if(hint) { hint.style.background='rgba(244,121,32,.18)'; hint.style.borderColor='var(--o)'; }
+    MAP.getContainer().style.cursor = 'crosshair';
+    tn('Map click ON — click map to pin DVR location');
+  } else {
+    if(dot)  { dot.style.background='rgba(255,255,255,.2)'; dot.style.boxShadow=''; }
+    if(st)   st.textContent = 'Tap to enable map click mode';
+    if(hint) { hint.style.background='rgba(244,121,32,.1)'; hint.style.borderColor='rgba(244,121,32,.4)'; }
+    MAP.getContainer().style.cursor = '';
+    tn('Map click mode OFF');
+  }
 }
 
 function lmEnableClick(){
@@ -1177,7 +1282,8 @@ function ae(){
 }
 
 function rndrE(fp){
-  var el=document.getElementById('el');
+  var el=document.getElementById('g4list');
+  if(!el) return;
   var all=gAD();var entries=[];
   if(fp&&all[fp])entries=all[fp].map(function(e){return Object.assign({},e,{_pin:fp});});
   else for(var p in all)all[p].forEach(function(e){entries.push(Object.assign({},e,{_pin:p}));});
@@ -1296,48 +1402,43 @@ function dvPlotGps() {
   var lat = parseFloat(document.getElementById('dv-lat').value);
   var lng = parseFloat(document.getElementById('dv-lng').value);
   if (isNaN(lat) || isNaN(lng)) {
-    tn('Enter latitude & longitude first, or use GPS button');
+    tn('Enter latitude & longitude first, or use GPS / click map');
     return;
   }
 
+  /* Hide placeholder */
   var ph = document.getElementById('dv-map-placeholder');
-  var mc = document.getElementById('dv-map-mini');
   if (ph) ph.style.display = 'none';
 
-  /* Destroy existing mini-map if any */
-  if (window._dvMiniMap) {
-    try { window._dvMiniMap.remove(); } catch(e) {}
-    window._dvMiniMap = null;
-  }
+  /* Centre main MAP on the subject location */
+  MAP.setView([lat, lng], 14);
 
-  /* Create container div for Leaflet inside dv-map-mini */
-  var mapDiv = document.getElementById('dv-leaflet-mini');
-  if (!mapDiv) {
-    mapDiv = document.createElement('div');
-    mapDiv.id = 'dv-leaflet-mini';
-    mapDiv.style.cssText = 'width:100%;height:160px';
-    mc.appendChild(mapDiv);
+  /* Clear old DVR plot markers */
+  if (window._dvPlotMarkers) {
+    window._dvPlotMarkers.forEach(function(m){ MAP.removeLayer(m); });
   }
-
-  var m = L.map('dv-leaflet-mini', {zoomControl:true, attributionControl:false}).setView([lat, lng], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(m);
-  window._dvMiniMap = m;
+  window._dvPlotMarkers = [];
 
   /* Subject pin */
   var subIcon = L.divIcon({
-    html: '<div style="background:#F47920;border:2px solid #fff;border-radius:50%;width:14px;height:14px;box-shadow:0 0 6px rgba(0,0,0,.4)"></div>',
-    iconSize:[14,14], iconAnchor:[7,7], className:''
+    html: '<div style="background:#F47920;border:3px solid #fff;border-radius:50%;width:16px;height:16px;box-shadow:0 0 8px rgba(244,121,32,.7)"></div>',
+    iconSize:[16,16], iconAnchor:[8,8], className:''
   });
-  L.marker([lat, lng], {icon: subIcon})
-    .addTo(m)
+  var subMkr = L.marker([lat, lng], {icon: subIcon})
+    .addTo(MAP)
     .bindPopup('<b style="color:#F47920">&#128205; Subject Property</b><br>' + lat.toFixed(5) + '°N, ' + lng.toFixed(5) + '°E')
     .openPopup();
+  window._dvPlotMarkers.push(subMkr);
 
-  /* Pull nearby rate entries from local storage and plot them */
+  /* Draw radius circle */
   var rad = parseFloat(document.getElementById('dv-rad').value) || 10;
+  if(window._dvCircle){ try{MAP.removeLayer(window._dvCircle);}catch(e){} }
+  window._dvCircle = L.circle([lat,lng],{radius:rad*1000,color:'#F47920',weight:1.5,fillOpacity:.06,dashArray:'5,5'}).addTo(MAP);
+  window._dvPlotMarkers.push(window._dvCircle);
+
+  /* Pull nearby GPS-tagged entries */
   var all = gAD();
   var hits = [];
-
   for (var pin in all) {
     all[pin].forEach(function(e) {
       var elat = e.geo && e.geo.lat ? e.geo.lat : null;
@@ -1349,23 +1450,21 @@ function dvPlotGps() {
     });
   }
 
-  /* Also use pincode centroids from database for context */
-  var PC = window._PC || {};
   var rateHtml = '';
-
   hits.forEach(function(h) {
     var rateIcon = L.divIcon({
-      html: '<div style="background:#0D7A4C;border:2px solid #fff;border-radius:3px;padding:2px 4px;font-size:9px;font-weight:700;color:#fff;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.3)">₹' + Math.round(h.rate/1000) + 'k</div>',
-      iconSize:'auto', iconAnchor:[0,0], className:''
+      html: '<div style="background:#0D7A4C;border:2px solid #fff;border-radius:4px;padding:2px 5px;font-size:9px;font-weight:800;color:#fff;white-space:nowrap;box-shadow:0 2px 5px rgba(0,0,0,.35)">₹' + Math.round(h.rate/1000) + 'k</div>',
+      iconSize:[1,1], iconAnchor:[0,8], className:''
     });
-    L.marker([h.lat, h.lng], {icon: rateIcon})
-      .addTo(m)
+    var mkr = L.marker([h.lat, h.lng], {icon: rateIcon})
+      .addTo(MAP)
       .bindPopup(
         '<b>' + h.pin + '</b> · ' + (h.type||'Land') + '<br>' +
         '<span style="color:#0D7A4C;font-weight:700">FMV: ₹' + Math.round(h.rate).toLocaleString('en-IN') + '/sqft</span>' +
         (h.gv ? '<br><span style="color:#2E6B9E">GV: ₹' + Math.round(h.gv).toLocaleString('en-IN') + '/sqft</span>' : '') +
         '<br><span style="font-size:10px;color:#666">~' + h.dist + ' km away</span>'
       );
+    window._dvPlotMarkers.push(mkr);
     rateHtml += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 10px;border-bottom:1px solid var(--b);font-size:.54rem">'
       + '<span style="color:var(--t)">' + h.pin + ' · ' + (h.type||'Land') + '</span>'
       + '<span style="color:var(--g);font-weight:700">₹' + Math.round(h.rate).toLocaleString('en-IN') + '/sqft</span>'
@@ -1376,13 +1475,11 @@ function dvPlotGps() {
   if (hits.length > 0) {
     nb.style.display = 'block';
     nb.innerHTML = '<div style="padding:3px 10px;background:var(--n);font-size:.48rem;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.1em;text-transform:uppercase">Nearby Rate Entries (' + hits.length + ')</div>' + rateHtml;
-    tn(hits.length + ' nearby rate entries plotted');
+    tn(hits.length + ' rate entries plotted on map');
   } else {
     nb.style.display = 'none';
-    tn('No GPS-tagged entries within ' + rad + ' km — add entries with GPS tags');
+    tn('No GPS-tagged entries within ' + rad + ' km — add entries with GPS coordinates');
   }
-
-  setTimeout(function(){ m.invalidateSize(); }, 100);
 }
 
 function dvRun() {
@@ -1512,16 +1609,16 @@ function dvRun() {
   document.getElementById('dv-coord-badge').textContent =
     lat.toFixed(4) + '°N  ' + lng.toFixed(4) + '°E';
 
-  document.getElementById('fvv').textContent = fmt(wfmv) + ' /sqft';
-  document.getElementById('fvs').textContent = fsm(wfmv) + '  (' + (hits.length?hits.length+' comparables within '+rad+'km':'model estimate — no team entries in range') + ')';
-  document.getElementById('fve').textContent = hits.length
+  document.getElementById('dv-fvv').textContent = fmt(wfmv) + ' /sqft';
+  document.getElementById('dv-fvs').textContent = fsm(wfmv) + '  (' + (hits.length?hits.length+' comparables within '+rad+'km':'model estimate — no team entries in range') + ')';
+  document.getElementById('dv-fve').textContent = hits.length
     ? 'IDW weighted avg  ·  Simple avg: ' + fmt(sfmv) + '/sqft'
     : 'No team entries in range — using model value. Add rates via Enter Rates tab.';
   document.getElementById('dv-n-badge').textContent = hits.length ? hits.length + ' pts' : 'Model';
 
   document.getElementById('fgv2').textContent = fmt(gvFinal) + ' /sqft';
   document.getElementById('fgs2').textContent = fsm(gvFinal);
-  document.getElementById('fge').textContent = wgv ? 'Weighted avg from ' + gvHits.length + ' team entries' : 'Model estimate (SRO/IGR basis)';
+  document.getElementById('dv-fge').textContent = wgv ? 'Weighted avg from ' + gvHits.length + ' team entries' : 'Model estimate (SRO/IGR basis)';
 
   document.getElementById('fem2').textContent  = hits.length || 'Model';
   document.getElementById('frng2').textContent = hits.length ? fmt(mn) + '–' + fmt(mx) : '—';
@@ -1534,7 +1631,7 @@ function dvRun() {
     document.getElementById('dv-comps').style.display = 'block';
     document.getElementById('dv-footer-rate').textContent = fmt(wfmv);
     document.getElementById('dv-footer-gv').textContent   = wgv ? fmt(wgv) : '—';
-    document.getElementById('dv-comp-list').innerHTML = hits.map(function(h, i) {
+    var dcl=document.getElementById('dv-comp-list'); if(!dcl) return; dcl.innerHTML = hits.map(function(h, i) {
       var w    = Math.round(weights[i] / wsum * 100);
       var barC = w>30 ? 'var(--g)' : w>15 ? 'var(--o)' : 'var(--n4)';
       var gvTx = h.e.guidelineValue ? fmt(h.e.guidelineValue) : '—';
@@ -1766,7 +1863,7 @@ function rpt(){
   /* Header — logo left, title centre, UGRO right */
   bod.push('<div class="hdr">');
   bod.push('<div class="logo-box"><img src="UGRO_LOGO_PLACEHOLDER" alt="UGRO Capital"></div>');
-  bod.push('<div class="hdr-mid"><h1>Hybrid Desktop Opinion</h1><p>Fastest, Closest &amp; Evidential</p></div>');
+  bod.push('<div class="hdr-mid"><h1>Desktop Valuation Report</h1></div>');
   bod.push('<div style="width:100px;text-align:right"><div style="font-size:10px;color:#555;font-weight:600">UGRO Capital</div><div style="font-size:9px;color:#888">Collateral Intelligence</div></div>');
   bod.push('</div>');
 
@@ -1777,7 +1874,7 @@ function rpt(){
   bod.push('<tr><td style="background:#f9f9f9;font-weight:600">Address</td><td>'+addrStr+'</td></tr>');
   bod.push('<tr><td style="background:#f9f9f9;font-weight:600">Ballpark Guidance Rates</td><td style="font-weight:700;color:#1a5c1a">'+ballpark+'</td></tr>');
   bod.push('<tr><td style="background:#f9f9f9;font-weight:600">Margin of Variance (+/- %)</td><td>&plusmn;'+varPct+'%</td></tr>');
-  bod.push('<tr><td style="background:#f9f9f9;font-weight:600">Confidence Level</td><td><b>'+cf+'</b> &nbsp;&mdash;&nbsp; based on '+dp+' comparable'+(dp===1?'':'s')+' within '+rad+'km radius</td></tr>');
+
   bod.push('<tr><td style="background:#f9f9f9;font-weight:600">Date of Report</td><td>'+todayFull+'</td></tr>');
   bod.push('</table>');
 
@@ -1795,18 +1892,17 @@ function rpt(){
   bod.push('<tr><td><b>Fair Market Value (IDW)</b></td><td style="font-weight:700;font-size:14px;color:#1a5c1a">'+mv.toLocaleString('en-IN')+'</td><td>Geo-weighted avg of '+dp+' comparable'+(dp===1?'':'s')+' (IDW p=2)</td></tr>');
   bod.push('<tr><td>Guideline / Circle Rate</td><td style="font-weight:700">'+gv.toLocaleString('en-IN')+'</td><td>SRO / State IGR Reference</td></tr>');
   bod.push('<tr><td>Market Premium over GV</td><td>+'+prm+'%</td><td>Forced sale risk indicator</td></tr>');
-  bod.push('<tr><td>Max Collateral ('+tc.lr+'% LTV)</td><td style="font-weight:700">'+col.toLocaleString('en-IN')+'</td><td>Per RBI MSME LTV norms</td></tr>');
+
   bod.push('<tr><td>Forced Sale Value</td><td style="font-weight:700">'+fsv.toLocaleString('en-IN')+'</td><td>'+Math.round(tc.fv*100)+'% of FMV</td></tr>');
   bod.push('<tr><td>Zone</td><td>'+tc.l+'</td><td>LTV Ceiling: '+tc.lr+'% rec / '+tc.lm+'% max</td></tr>');
   bod.push('</table>');
 
-  /* Map */
+  /* Map — built via DOM injection after modal renders to avoid script-in-string issue */
+  var _rptLat=lat, _rptLng=lng, _rptRad=rad, _rptPin=pin, _rptKm=km, _rptHits=hits;
   if(lat&&lng){
-    bod.push('<h2>Location Map — '+rad+' km Radius</h2>');
-    bod.push('<div class="map-wrap">');
-    bod.push('<iframe src="'+osmUrl+'" title="Location Map" loading="lazy"></iframe>');
-    bod.push('</div>');
-    bod.push('<p class="ref-lbl">&#128205; Lat: '+lat.toFixed(7)+' &nbsp; Lon: '+lng.toFixed(7)+' &nbsp;&mdash;&nbsp; '+rad+' km search radius &nbsp;&mdash;&nbsp; Nearest pincode: <b>'+pin+'</b> (~'+km+'km)</p>');
+    bod.push('<h2>Location Map — '+rad+' km Search Radius</h2>');
+    bod.push('<div id="rpt-map-container" style="height:310px;border:1px solid #ccc;border-radius:4px;margin:8px 0;background:#e8f4f8"></div>');
+    bod.push('<p class="ref-lbl">&#128205; Subject: '+lat.toFixed(7)+'°N, '+lng.toFixed(7)+'°E &nbsp;—&nbsp; Radius: '+rad+' km &nbsp;—&nbsp; Nearest pin: <b>'+pin+'</b>'+(km?' (~'+km+' km)':'')+'</p>');
   }
 
   /* Reference Values */
@@ -1843,6 +1939,58 @@ function rpt(){
   modal.innerHTML=doc;
   var cb=modal.querySelector('#r-close');
   if(cb) cb.onclick=function(){var m=document.getElementById('dvr-modal');if(m)m.remove();};
+
+  /* Inject interactive Leaflet map into report after DOM is set */
+  if(_rptLat&&_rptLng){
+    setTimeout(function(){
+      var mc=document.getElementById('rpt-map-container');
+      if(!mc) return;
+      /* Leaflet already loaded in main page */
+      var rmap=L.map(mc,{zoomControl:true,attributionControl:false}).setView([_rptLat,_rptLng],13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(rmap);
+
+      /* Subject property marker */
+      var subIc=L.divIcon({className:'',
+        html:'<div style="width:18px;height:18px;background:#C0392B;border:3px solid #fff;border-radius:50%;box-shadow:0 0 10px rgba(192,57,43,.8)"></div>',
+        iconSize:[18,18],iconAnchor:[9,9]});
+      L.marker([_rptLat,_rptLng],{icon:subIc}).addTo(rmap)
+        .bindPopup('<b style="color:#C0392B">&#128205; Subject Property</b><br>'+_rptLat.toFixed(5)+'°N, '+_rptLng.toFixed(5)+'°E<br>Nearest pin: <b>'+_rptPin+'</b>')
+        .openPopup();
+
+      /* Radius circle */
+      L.circle([_rptLat,_rptLng],{radius:_rptRad*1000,color:'#2E6B9E',weight:2,dashArray:'7,5',fillOpacity:0.06}).addTo(rmap);
+
+      /* Comparable/reference markers — orange, labelled as UGRO Properties Funded */
+      (_rptHits||[]).slice(0,25).forEach(function(h){
+        var eLat=h.geo?h.geo.lat:(h.e&&h.e.geo?h.e.geo.lat:null);
+        var eLng=h.geo?h.geo.lng:(h.e&&h.e.geo?h.e.geo.lng:null);
+        if(!eLat||!eLng) return;
+        var rate=h.e?h.e.marketRate:0;
+        var pt=h.e?(h.e.propertyType||'Land'):'Land';
+        var d2=h.dist?parseFloat(h.dist).toFixed(2):'—';
+        var ic=L.divIcon({className:'',
+          html:'<div style="background:#F47920;border:2px solid #fff;border-radius:4px;padding:2px 6px;font-size:9px;font-weight:800;color:#fff;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.35)">₹'+Math.round(rate/1000)+'k</div>',
+          iconSize:[1,1],iconAnchor:[0,10]});
+        L.marker([eLat,eLng],{icon:ic}).addTo(rmap)
+          .bindPopup('<b style="color:#F47920">UGRO Properties Funded</b><br>'+pt+'<br><b>₹'+Math.round(rate).toLocaleString('en-IN')+'/sqft</b><br>~'+d2+' km');
+        L.circleMarker([eLat,eLng],{radius:8,color:'#F47920',fillColor:'#F47920',fillOpacity:0.65,weight:2}).addTo(rmap);
+      });
+
+      /* Legend */
+      var leg=L.control({position:'bottomright'});
+      leg.onAdd=function(){
+        var d=L.DomUtil.create('div');
+        d.style.cssText='background:#fff;padding:8px 12px;border:1px solid #ccc;border-radius:5px;font-size:11px;line-height:1.9;box-shadow:0 2px 6px rgba(0,0,0,.15)';
+        d.innerHTML='<b>Legend</b><br>'
+          +'<span style="color:#C0392B;font-size:14px">●</span> Subject Property<br>'
+          +'<span style="color:#F47920;font-size:14px">●</span> UGRO Properties Funded<br>'
+          +'<span style="color:#2E6B9E">──</span> Search Radius ('+_rptRad+' km)';
+        return d;
+      };
+      leg.addTo(rmap);
+      setTimeout(function(){rmap.invalidateSize();},150);
+    },200);
+  }
 }
 
 function sw(n){
@@ -2381,7 +2529,7 @@ function lmNearby() {
   document.getElementById('lm-footer-rate').textContent  = fmt(wfmv);
   document.getElementById('lm-footer-gv').textContent    = wgv ? fmt(wgv) : '—';
 
-  document.getElementById('lm-nlist').innerHTML = hits.map(function(h, i) {
+  var lnl=document.getElementById('lm-nlist'); if(lnl) lnl.innerHTML = hits.map(function(h, i) {
     var w    = Math.round(weights[i] / wsum * 100);
     var barC = w > 30 ? 'var(--g)' : w > 15 ? 'var(--o)' : 'var(--n4)';
     var gvTxt = h.e.guidelineValue ? fmt(h.e.guidelineValue) : '—';
