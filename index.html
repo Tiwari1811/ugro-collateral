@@ -1029,7 +1029,7 @@ function initMap(){
       tn('Coordinates pinned: '+lat+'°N, '+lng+'°E');
 
     } else if(activeTab === 3){
-      /* Desktop DVR tab — fill dv-lat/dv-lng */
+      /* Desktop DVR tab -- fill dv-lat/dv-lng */
       var dl = document.getElementById('dv-lat');
       var dn = document.getElementById('dv-lng');
       if(dl) dl.value = lat;
@@ -1037,8 +1037,19 @@ function initMap(){
       var dot3 = document.getElementById('dv-click-dot');
       if(dot3) dot3.style.background = 'var(--g)';
       var st3 = document.getElementById('dv-click-status');
-      if(st3) st3.textContent = '✓ Pinned at '+lat+'°N, '+lng+'°E — click again to update';
-      tn('Coordinates pinned: '+lat+'°N, '+lng+'°E — click Generate DVR Report');
+      if(st3) st3.textContent = 'Pinned at '+lat.toFixed(5)+'N, '+lng.toFixed(5)+'E -- click Compute';
+      /* Drop subject property pin with popup */
+      if(window._dvPinMarker){ try{MAP.removeLayer(window._dvPinMarker);}catch(e){} }
+      var dvIc = L.divIcon({className:'',
+        html:'<div style="width:18px;height:18px;background:#C0392B;border:3px solid #fff;border-radius:50%;box-shadow:0 0 10px rgba(192,57,43,.8)"></div>',
+        iconSize:[18,18],iconAnchor:[9,9]});
+      window._dvPinMarker = L.marker([lat,lng],{icon:dvIc}).addTo(MAP)
+        .bindPopup('<b style="color:#C0392B">Subject Property</b><br>'
+          +lat.toFixed(5)+'N, '+lng.toFixed(5)+'E<br>'
+          +'<span style="font-size:11px;color:#666">Click Compute to run valuation</span>')
+        .openPopup();
+      dvResetGenBtn();
+      tn('Location pinned -- click Compute');
     }
   });
   /* Force Leaflet to recalculate container size after layout settles */
@@ -1369,10 +1380,18 @@ function dvGps() {
   tn('Requesting GPS...');
   navigator.geolocation.getCurrentPosition(
     function(p) {
-      document.getElementById('dv-lat').value = p.coords.latitude.toFixed(6);
-      document.getElementById('dv-lng').value = p.coords.longitude.toFixed(6);
-      tn('GPS acquired — running valuation...');
-      setTimeout(dvRun, 300);
+      var lat = p.coords.latitude, lng = p.coords.longitude;
+      document.getElementById('dv-lat').value = lat.toFixed(6);
+      document.getElementById('dv-lng').value = lng.toFixed(6);
+      /* Drop subject pin with popup */
+      if(window._dvPinMarker){ try{MAP.removeLayer(window._dvPinMarker);}catch(e){} }
+      var dvIc=L.divIcon({className:'',html:'<div style="width:18px;height:18px;background:#C0392B;border:3px solid #fff;border-radius:50%;box-shadow:0 0 10px rgba(192,57,43,.8)"></div>',iconSize:[18,18],iconAnchor:[9,9]});
+      window._dvPinMarker=L.marker([lat,lng],{icon:dvIc}).addTo(MAP)
+        .bindPopup('<b style="color:#C0392B">Subject Property (GPS)</b><br>'+lat.toFixed(5)+'N, '+lng.toFixed(5)+'E<br><span style="font-size:11px;color:#666">Click Compute to run valuation</span>')
+        .openPopup();
+      MAP.flyTo([lat,lng],14,{duration:0.8});
+      dvResetGenBtn();
+      tn('GPS acquired -- click Compute');
     },
     function(e) { tn(e.code === 1 ? 'Location permission denied' : 'GPS unavailable'); },
     { enableHighAccuracy:true, timeout:12000, maximumAge:0 }
@@ -1862,30 +1881,30 @@ function rpt(){
     : '';
 
   var css=[
-    '@page{size:A4 portrait;margin:8mm 10mm}',
+    '@page{size:A4 portrait;margin:15mm 18mm}',
     '*{box-sizing:border-box;margin:0;padding:0}',
-    'body{font-family:Arial,sans-serif;font-size:9px;color:#1A1A1A;background:#fff}',
-    '.pg{width:100%;padding:0 4px 6px}',
-    '.np{background:#f0f0f0;border-bottom:1px solid #ccc;padding:6px 14px;display:flex;gap:6px;align-items:center;position:sticky;top:0;z-index:10}',
-    'h2{font-size:10px;font-weight:700;text-align:center;margin:5px 0 3px;text-decoration:underline}',
-    'h3{font-size:9px;font-weight:700;text-align:center;margin:4px 0 3px}',
-    'table{width:100%;border-collapse:collapse;margin-bottom:4px}',
-    'td,th{border:1px solid #bbb;padding:3px 6px;vertical-align:top;font-size:8.5px}',
-    'th{background:#f0f0f0;font-weight:700;text-align:center}',
-    '.hdr{display:flex;align-items:center;justify-content:space-between;padding:5px 0 4px;border-bottom:2px solid #333;margin-bottom:5px}',
+    'body{font-family:Arial,sans-serif;font-size:12px;color:#1A1A1A;background:#fff}',
+    '.pg{max-width:900px;margin:0 auto;padding:0 20px 30px}',
+    '.np{background:#f0f0f0;border-bottom:1px solid #ccc;padding:8px 20px;display:flex;gap:8px;align-items:center;position:sticky;top:0;z-index:10}',
+    'h2{font-size:15px;font-weight:700;text-align:center;margin:16px 0 10px;text-decoration:underline}',
+    'h3{font-size:13px;font-weight:700;text-align:center;margin:14px 0 8px}',
+    'table{width:100%;border-collapse:collapse;margin-bottom:12px}',
+    'td,th{border:1px solid #999;padding:7px 10px;vertical-align:top;font-size:12px}',
+    'th{background:#f5f5f5;font-weight:700;text-align:center}',
+    '.hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 0 10px;border-bottom:2px solid #333;margin-bottom:14px}',
     '.hdr-mid{text-align:center}',
-    '.hdr-mid h1{font-size:13px;font-weight:700;text-decoration:underline}',
-    '.hdr-mid p{font-size:8px;color:#555}',
-    '.logo-box{width:75px;text-align:left}',
-    '.logo-box img{max-height:30px;max-width:75px;object-fit:contain}',
-    '.section{margin-bottom:5px}',
+    '.hdr-mid h1{font-size:18px;font-weight:700;text-decoration:underline}',
+    '.hdr-mid p{font-size:11px;color:#555}',
+    '.logo-box{width:100px;text-align:left}',
+    '.logo-box img{max-height:44px;max-width:100px;object-fit:contain}',
+    '.section{margin-bottom:18px}',
     '.map-wrap{border:1px solid #bbb;margin:4px 0;overflow:hidden;height:160px;background:#e8f4f8;position:relative}',
     '.map-wrap iframe{width:100%;height:100%;border:none}',
-    '.terms{font-size:7.5px;color:#444;line-height:1.5;margin-top:3px}',
-    '.terms p{margin-bottom:2px}',
-    '.sign{text-align:right;margin-top:6px;font-size:8.5px;font-weight:700}',
-    '.ref-lbl{font-size:7.5px;color:#555;margin-top:2px}',
-    '@media print{.np{display:none!important}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}#rpt-map-container{height:140px!important}}'
+    '.terms{font-size:10px;color:#444;line-height:1.7;margin-top:10px}',
+    '.terms p{margin-bottom:6px}',
+    '.sign{text-align:right;margin-top:20px;font-size:11px;font-weight:700}',
+    '.ref-lbl{font-size:10px;color:#555;margin-top:4px}',
+    '@media print{.np{display:none!important}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}#rpt-map-container{height:260px!important}}'
   ].join('');
 
   var bod=[];
@@ -1939,7 +1958,7 @@ function rpt(){
   var _rptLat=lat, _rptLng=lng, _rptRad=rad, _rptPin=pin, _rptKm=km, _rptHits=hits;
   if(lat&&lng){
     bod.push('<h2>Location Map — '+rad+' km Search Radius</h2>');
-    bod.push('<div id="rpt-map-container" style="height:180px;border:1px solid #ccc;border-radius:4px;margin:4px 0;background:#e8f4f8"></div>');
+    bod.push('<div id="rpt-map-container" style="height:280px;border:1px solid #ccc;border-radius:4px;margin:10px 0;background:#e8f4f8"></div>');
     bod.push('<p class="ref-lbl">&#128205; Subject: '+lat.toFixed(7)+'°N, '+lng.toFixed(7)+'°E &nbsp;—&nbsp; Radius: '+rad+' km &nbsp;—&nbsp; Nearest pin: <b>'+pin+'</b>'+(km?' (~'+km+' km)':'')+'</p>');
   }
 
